@@ -1883,8 +1883,8 @@ class Card {
 	get desc_name() {
 		if (this.row === "leader")
 			return (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? "Leader Ability" : "Умение лидера";
-		else if (this.abilities.length > 0)
-			return ability_dict[this.abilities[this.abilities.length-1]].name;
+		else if (this.abilities.length > 0 && typeof ability_dict !== 'undefined' && ability_dict[this.abilities[this.abilities.length-1]])
+			return ability_dict[this.abilities[this.abilities.length-1]].name || "";
 		else if (this.row === "agile")
 			return (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? "Agile" : "Маневренность";
 		else if (this.hero)
@@ -1894,11 +1894,15 @@ class Card {
 	}
 
 	get desc() {
-		let description = this.row === "agile" ? ability_dict["agile"].description : "";
+		if (typeof ability_dict === 'undefined') return "";
+		let description = (this.row === "agile" && ability_dict["agile"]) ? ability_dict["agile"].description : "";
 		for (let i = this.abilities.length - 1; i >= 0; --i) {
-			description += ability_dict[this.abilities[i]].description;
+			const ab = ability_dict[this.abilities[i]];
+			if (ab) {
+				description += ab.description || "";
+			}
 		}
-		if (this.hero)
+		if (this.hero && ability_dict["hero"])
 			description += ability_dict["hero"].description;
 		return description;
 	}
