@@ -10,6 +10,15 @@
 	<meta name="keywords" content="arun, sundaram, programmer, gwent, tw3, witcher, card, game, gamedev, play" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 	<link rel="stylesheet" type="text/css" href="style.css" />
+	<script>
+	window.onerror = function(message, source, lineno, colno, error) {
+		var div = document.createElement('div');
+		div.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:999999;font-size:16px;padding:10px;word-break:break-all;font-family:sans-serif;';
+		div.innerHTML = '<b>JS Error:</b> ' + message + ' <br><b>Source:</b> ' + source + ' <br><b>Line:</b> ' + lineno + ':' + colno + ' <br><b>Stack:</b> ' + (error ? error.stack : 'none');
+		document.body.appendChild(div);
+		return false;
+	};
+	</script>
 </head>
 
 <body>
