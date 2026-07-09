@@ -1258,26 +1258,23 @@ main { background-image: url('img/boardtest8.png'); }
 	text-align: center;
 }
 
-.deck-options{
+.deck-options-container {
 	position: absolute;
+	width: 100%;
+	top: 15%;
+	display: flex;
+	justify-content: center;
+	gap: 4vw;
+	z-index: 10;
+}
+.deck-options {
+	position: relative;
 	font-size: 1vw;
 	color: white;
-	top: 15%;
+	cursor: pointer;
 }
 .deck-options:hover {
 	text-decoration: underline;
-}
-
-#download-deck {
-	left: 55%;
-}
-
-#upload-deck {
-	left: 40%;
-}
-
-#change-faction {
-	left: 47%;
 }
 
 .card-array {
@@ -1453,9 +1450,8 @@ main { background-image: url('img/boardtest8.png'); }
 #op-preview-faction {
 	/* visibility: hidden; */
 }
-#op-preview-leader::after {
-	left: 46vw;
-	bottom: -1.5vw;
+#op-preview-leader {
+	cursor: pointer;
 }
 #op-preview-leader>p {
 	font-size: 1vw;
@@ -1465,6 +1461,15 @@ main { background-image: url('img/boardtest8.png'); }
 #op-preview-leader:hover {
 	text-decoration: underline;
 	text-decoration-color: white;
+}
+#op-preview-upload {
+	font-size: 1vw;
+	color: white;
+	cursor: pointer;
+	margin: 0.2vw;
+}
+#op-preview-upload:hover {
+	text-decoration: underline;
 }
 #opponent-preview button {
 	background-color: transparent;
@@ -1664,20 +1669,76 @@ main { background-image: url('img/boardtest8.png'); }
 	pointer-events: auto !important;
 }
 
-#op-hand-counter {
-	position: absolute;
-	top: 0.5vw;
-	left: 50%;
-	transform: translateX(-50%);
-	z-index: 10;
-	background: rgba(10, 10, 10, 0.85);
-	border: 0.1vw solid #c9a054;
-	color: #c9a054;
-	font-family: Arial Narrow, sans-serif;
-	font-size: 1.1vw;
+/* Removed #op-hand-counter */
+
+/* Language Toggle Button styling */
+#toggle-lang {
+	top: 48.9vw;
+	left: 22.8vw;
+	color: #fff;
+	font-size: 1vw;
 	font-weight: bold;
-	padding: 0.2vw 1vw;
-	border-radius: 0.3vw;
-	box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-	pointer-events: none;
+	border: 0.1vw solid #c9a054;
+	border-radius: 50%;
+	width: 2.5vw;
+	height: 2.5vw;
+	line-height: 2.3vw;
+	cursor: pointer;
+	text-shadow: 0 0 2px black;
+	background: rgba(10, 10, 10, 0.85);
+	text-align: center;
+	user-select: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0px 0px 2px black;
 }
+#toggle-lang.deck-menu {
+	top: 45.3vw;
+	left: 53.5vw;
+	z-index: 86;
+}
+#toggle-lang:hover {
+	filter: drop-shadow(0px 0px 3px rgba(255, 255, 255, 0.5));
+	box-shadow: 0px 0px 4px #c9a054;
+	border-color: #fff;
+}
+
+/* Carousel Select Button styling */
+#carousel-select-btn {
+	display: block;
+	margin: 0.8vw auto 0;
+	padding: 0.5vw 1.8vw;
+	font-size: 1vw;
+	color: white;
+	background-color: #1a1a1a;
+	border: 0.1vw ridge #c9a054;
+	border-radius: 0.3vw;
+	cursor: pointer;
+	transition: all 0.2s;
+	font-family: inherit;
+}
+#carousel-select-btn:hover {
+	box-shadow: 0 0 0.8vw #c9a054;
+	background-color: #2b2b2b;
+}
+
+/* English overrides for notification text content */
+.lang-en #notif-me-first::after { content: "You go first" !important; }
+.lang-en #notif-op-first::after { content: "Opponent goes first" !important; }
+.lang-en #notif-me-coin::after { content: "You go first" !important; }
+.lang-en #notif-op-coin::after { content: "Opponent goes first" !important; }
+.lang-en #notif-round-start::after { content: "Round starts" !important; }
+.lang-en #notif-me-pass::after { content: "Round passed" !important; }
+.lang-en #notif-op-pass::after { content: "Opponent passed" !important; }
+.lang-en #notif-win-round::after { content: "You won the round!" !important; }
+.lang-en #notif-lose-round::after { content: "Opponent won the round" !important; }
+.lang-en #notif-draw-round::after { content: "Round ended in a draw" !important; }
+.lang-en #notif-me-turn::after { content: "Your turn!" !important; }
+.lang-en #notif-op-turn::after { content: "Opponent's turn" !important; }
+.lang-en #notif-north::after { content: "Northern Realms ability: drew an extra card." !important; }
+.lang-en #notif-monsters::after { content: "Monsters ability: a random unit stayed on board." !important; }
+.lang-en #notif-scoiatael::after { content: "Opponent chose to go first using Scoia'tael ability." !important; }
+.lang-en #notif-skellige-op::after { content: "Opponent's Skellige ability activated!" !important; }
+.lang-en #notif-skellige-me::after { content: "Skellige ability activated!" !important; }
+

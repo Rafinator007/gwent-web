@@ -1619,7 +1619,20 @@ class Game {
 			socket.emit('game_action', { type: 'REDRAW_DONE' });
 			myRedrawsDone = true;
 			
-			await sleepUntil(() => myRedrawsDone && opRedrawsDone, 100);
+			if (!opRedrawsDone) {
+				let waitingBanner = document.createElement("div");
+				waitingBanner.id = "mulligan-waiting-banner";
+				waitingBanner.style.cssText = "position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); color: #c9a054; border: 1px solid #c9a054; padding: 1.5vw 3vw; font-size: 1.5vw; z-index: 100; font-family: sans-serif; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: none;";
+				waitingBanner.innerText = (Settings.language && Settings.language.get() === "en") 
+					? "Waiting for opponent to finish swapping cards..." 
+					: "Ожидание выбора карт соперником...";
+				document.body.appendChild(waitingBanner);
+				
+				await sleepUntil(() => opRedrawsDone, 100);
+				waitingBanner.remove();
+			} else {
+				await sleepUntil(() => myRedrawsDone && opRedrawsDone, 100);
+			}
 			ui.enablePlayer(false);
 		} else {
 			for (let i=0; i< 2; i++)
@@ -1864,25 +1877,30 @@ class Card {
 			}
 		}
 		
+		this.elem = this.createCardElem(this);
+	}
+
+	get desc_name() {
 		if (this.row === "leader")
-			this.desc_name = "Умение лидера";
+			return (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? "Leader Ability" : "Умение лидера";
 		else if (this.abilities.length > 0)
-			this.desc_name = ability_dict[this.abilities[this.abilities.length-1]].name;
-		else if (this.row==="agile")
-			this.desc_name = "Маневренность";
+			return ability_dict[this.abilities[this.abilities.length-1]].name;
+		else if (this.row === "agile")
+			return (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? "Agile" : "Маневренность";
 		else if (this.hero)
-			this.desc_name = "Герой";
+			return (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? "Hero" : "Герой";
 		else
-			this.desc_name = "";
-		
-		this.desc = this.row ==="agile" ? ability_dict["agile"].description : "";
-		for (let i=this.abilities.length-1; i>=0; --i) {
-			this.desc += ability_dict[this.abilities[i]].description;
+			return "";
+	}
+
+	get desc() {
+		let description = this.row === "agile" ? ability_dict["agile"].description : "";
+		for (let i = this.abilities.length - 1; i >= 0; --i) {
+			description += ability_dict[this.abilities[i]].description;
 		}
 		if (this.hero)
-			this.desc += ability_dict["hero"].description;
-		
-		this.elem = this.createCardElem(this);
+			description += ability_dict["hero"].description;
+		return description;
 	}
 	
 	// Returns the identifier for this type of card
@@ -2082,6 +2100,11 @@ class UI {
 		if (!Settings.soundEffects.isEnabled())
 			this.toggleSFX_elem.classList.add("fade");
 
+		this.toggleLang_elem = document.getElementById("toggle-lang");
+		this.toggleSettings.push(this.toggleLang_elem);
+		this.toggleLang_elem.addEventListener("click", () => this.toggleLanguage(), false);
+		this.applyLanguage(Settings.language.get());
+
 		EventManager.gameOpened.bind(()=>this.toggleSettings.forEach(e=>e.classList.remove('deck-menu')));
 		EventManager.customizationOpened.bind(()=>this.toggleSettings.forEach(e=>e.classList.add('deck-menu')));
 
@@ -2186,6 +2209,76 @@ class UI {
 		else
 		{
 			this.toggleSFX_elem.classList.add("fade");
+		}
+	}
+
+	toggleLanguage() {
+		const currentLang = Settings.language.get();
+		const nextLang = currentLang === "ru" ? "en" : "ru";
+		Settings.language.set(nextLang);
+		this.applyLanguage(nextLang);
+	}
+
+	applyLanguage(lang) {
+		const isEn = (lang === "en");
+		
+		if (this.toggleLang_elem) {
+			this.toggleLang_elem.innerText = isEn ? "EN" : "RU";
+		}
+		
+		if (isEn) {
+			document.body.classList.add("lang-en");
+		} else {
+			document.body.classList.remove("lang-en");
+		}
+		
+		if (typeof TRANSLATIONS !== "undefined") {
+			const dict = TRANSLATIONS[lang];
+			if (dict) {
+				for (const selector in dict) {
+					const translations = dict[selector];
+					if (selector === "title") {
+						document.title = translations.text;
+						continue;
+					}
+					const elements = document.querySelectorAll(selector);
+					elements.forEach(elem => {
+						if (translations.text !== undefined) {
+							if (elem.children.length === 0) {
+								elem.innerText = translations.text;
+							} else {
+								elem.firstChild.textContent = translations.text;
+							}
+						}
+						if (translations.title !== undefined) {
+							elem.setAttribute("data-title", translations.title);
+						}
+						if (translations.placeholder !== undefined) {
+							elem.setAttribute("placeholder", translations.placeholder);
+						}
+					});
+				}
+			}
+		}
+		
+		if (Carousel.curr) {
+			Carousel.curr.update();
+		}
+		if (this.previewCard) {
+			this.setDescription(this.previewCard, this.preview.children[1]);
+		}
+		
+		if (typeof dm !== "undefined" && dm.updateStats) {
+			dm.update();
+			const titleH1 = document.getElementById("faction-title")?.getElementsByTagName("h1")[0];
+			if (titleH1 && factions[dm.faction]) {
+				titleH1.innerHTML = factions[dm.faction].name;
+			}
+			const descP = document.getElementById("faction-description");
+			if (descP && factions[dm.faction]) {
+				descP.innerHTML = factions[dm.faction].description;
+			}
+			dm.updatedCustomOpponent();
 		}
 	}
 	
@@ -2395,7 +2488,7 @@ class UI {
 			}
 			return;
 		}
-		let carousel = new Carousel(container, count, action, predicate, bSort, bQuit, title);
+		let carousel = new Carousel(container, count, action, predicate, bSort, bQuit, title, isViewOnly);
 		if (Carousel.curr === undefined || Carousel.curr === null)
 			carousel.start();
 		else {
@@ -2536,7 +2629,7 @@ class UI {
 // Clicking the middle card performs the action on that card "count" times
 // Clicking adejacent cards shifts the menu to focus on that card
 class Carousel {
-	constructor(container, count, action, predicate, bSort, bExit = false, title) {
+	constructor(container, count, action, predicate, bSort, bQuit, title, isViewOnly = false) {
 		if (count <= 0 || !container || !action || container.cards.length === 0)
 			return ;
 		this.container = container;
@@ -2546,13 +2639,32 @@ class Carousel {
 		this.bSort = bSort;
 		this.indices = [];
 		this.index = 0;
-		this.bExit = bExit;
+		this.bExit = bQuit;
 		this.title = title;
 		this.cancelled = false;
+		this.isViewOnly = isViewOnly;
+		this.selectBtn = document.getElementById("carousel-select-btn");
 		
 		if (!Carousel.elem) {
 			Carousel.elem = document.getElementById("carousel");
 			Carousel.elem.children[0].addEventListener("click", () => Carousel.curr.cancel(), false);
+
+			// Swipe gestures for touch screens (mobile)
+			let startX = 0;
+			Carousel.elem.addEventListener('touchstart', (e) => {
+				startX = e.touches[0].clientX;
+			}, { passive: true });
+			Carousel.elem.addEventListener('touchend', (e) => {
+				let endX = e.changedTouches[0].clientX;
+				let diffX = endX - startX;
+				if (Math.abs(diffX) > 40) { // 40px threshold
+					if (diffX > 0) {
+						Carousel.curr?.shift(e, -1);
+					} else {
+						Carousel.curr?.shift(e, 1);
+					}
+				}
+			}, { passive: true });
 		}
 		this.elem = Carousel.elem;
 		document.getElementsByTagName("main")[0].classList.remove("noclick");
@@ -2584,6 +2696,16 @@ class Carousel {
 		} else {
 			this.title_elem.classList.add("hide");
 		}
+		
+		if (this.selectBtn) {
+			if (!this.isViewOnly && this.count > 0) {
+				this.selectBtn.classList.remove("hide");
+				this.selectBtn.innerText = (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? "Confirm" : "Выбрать";
+			} else {
+				this.selectBtn.classList.add("hide");
+			}
+		}
+
 		AudioManager.playSFX('open');
 		this.elem.classList.remove("hide");
 		ui.enablePlayer(true);
@@ -2617,9 +2739,17 @@ class Carousel {
 	// Called by client to perform action on the middle card in focus
 	async select(event) {
 		(event || window.event).stopPropagation();
+
+		// If selection button is active, only allow selecting via the select button itself
+		if (!this.isViewOnly && this.count > 0 && event && event.target !== this.selectBtn) {
+			return; // Ignore middle card clicks for selection
+		}
+
 		--this.count;
-		if (this.isLastSelection())
+		if (this.isLastSelection()) {
 			this.elem.classList.add("hide");
+			if (this.selectBtn) this.selectBtn.classList.add("hide");
+		}
 		if (this.count <= 0)
 			ui.enablePlayer(false);
 		
@@ -2679,6 +2809,7 @@ class Carousel {
 		for (let x of this.previews)
 			x.style.backgroundImage = "";
 		this.elem.classList.add("hide");
+		if (this.selectBtn) this.selectBtn.classList.add("hide");
 		Carousel.clearCurrent();
 		ui.quitCarousel();
 	}
@@ -2760,6 +2891,14 @@ class DeckMaker {
 		document.getElementById('op-preview-clear').addEventListener('click', () => this.clearOpponentDeck());
 		document.getElementById('op-preview-open').addEventListener('click', ()=>this.viewOponentCards());
 		document.getElementById("add-opponent").addEventListener("change", () => this.uploadOpponentDeck(), false);
+		document.getElementById('op-preview-faction').addEventListener('click', () => this.selectOpponentFaction());
+		document.getElementById('op-preview-leader').addEventListener('click', () => {
+			if (isEmpty(this.opponentData)) {
+				this.selectOpponentFaction();
+			} else {
+				this.selectOpponentLeader();
+			}
+		});
 
 
 		this.change_elem = document.getElementById("change-faction");
@@ -3108,6 +3247,59 @@ class DeckMaker {
 	{
 		this.uploadDeck('add-opponent', deck => this.loadOpponentDeck(deck, false));
 	}
+
+	selectOpponentFaction() {
+		let container = new CardContainer();
+		container.cards = Object.keys(factions).map( f => {
+			return {abilities: [f], filename: f, desc_name: factions[f].name, desc: factions[f].description, faction: "faction"};
+		});
+		let currentFaction = this.opponentData ? this.opponentData.faction : "realms";
+		let index = container.cards.reduce((a,c,i) => c.filename === currentFaction ? i : a, 0);
+		ui.queueCarousel(container, 1, (c,i) => {
+			const faction_name = c.cards[i].filename;
+			const faction_deck_str = premade_deck.find(d => JSON.parse(d).faction === faction_name);
+			if (faction_deck_str) {
+				const faction_deck = JSON.parse(faction_deck_str);
+				this.opponentData = {
+					faction: faction_name,
+					leader: faction_deck.leader,
+					cards: faction_deck.cards.map(cardArr => ({index: cardArr[0], count: cardArr[1]}))
+				};
+				Settings.opponentDeckCustom.set(this.opponentData);
+				this.updatedCustomOpponent();
+			}
+		}, () => true, false, true);
+		Carousel.curr.index = index;
+		Carousel.curr.update();
+	}
+
+	selectOpponentLeader() {
+		if (!this.opponentData || !this.opponentData.faction) return;
+		const faction_name = this.opponentData.faction;
+		const leaders = card_dict.map((c,i) => ({index: i, card:c}) )
+			.filter(c => c.card.deck === faction_name && c.card.row === "leader");
+		
+		let container = new CardContainer();
+		container.cards = leaders.map(c => {
+			let card = new Card(c.card, player_op);
+			card.data = c;
+			return card;
+		});
+		
+		let currentLeaderIndex = this.opponentData.leader;
+		let index = leaders.findIndex(l => l.index === currentLeaderIndex);
+		if (index === -1) index = 0;
+
+		ui.queueCarousel(container, 1, (c,i) => {
+			let data = c.cards[i].data;
+			this.opponentData.leader = data.index;
+			Settings.opponentDeckCustom.set(this.opponentData);
+			this.updatedCustomOpponent();
+			AudioManager.playSFX('ui_card_bank');
+		}, () => true, false, true);
+		Carousel.curr.index = index;
+		Carousel.curr.update();
+	}
 	
 	// Creates a deck from a JSON file's contents and sets that as the current deck
 	// Notifies client with warnings if the deck is invalid
@@ -3206,15 +3398,20 @@ class DeckMaker {
 		const factionElem = document.getElementById('op-preview-faction');
 		const leaderElem = document.getElementById('op-preview-leader');
 		const buttons = ['op-preview-clear', 'op-preview-open'].map(id=>document.getElementById(id));
+		const pText = leaderElem.querySelector('p');
 		if (isEmpty(this.opponentData))
 		{
-			leaderElem.children[1].innerHTML = "Random";
+			if (pText) {
+				pText.innerHTML = (Settings.language && Settings.language.get() === "en") ? "Random" : "Случайная";
+			}
 			[factionElem, ...buttons].forEach(e=>e.classList.add('hide'));
 		}
 		else
 		{
 			factionElem.style.setProperty('background-image', iconURL('deck_shield_' + this.opponentData.faction));
-			leaderElem.children[1].innerHTML = card_dict[this.opponentData.leader].name;
+			if (pText) {
+				pText.innerHTML = card_dict[this.opponentData.leader].name;
+			}
 			[factionElem, ...buttons].forEach(e=>e.classList.remove('hide'));
 		}
 	}
@@ -3436,6 +3633,7 @@ class SavedString
 
 class Settings
 {
+	static language = new SavedString("gc-language", "ru");
 	static music = new ToggleOption("gc-music", true);
 	static notifications = new ToggleOption("gc-notifications", true);
 	static soundEffects = new ToggleOption("gc-sound-effects", true);

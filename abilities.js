@@ -534,3 +534,67 @@ var ability_dict = {
 		placed: card => board.row.filter((c,i) => card.holder === player_me ^ i<3).forEach(r => r.effects.halfWeather = true)
 	}
 };
+
+const ABILITY_TRANSLATIONS = {
+	clear: { name: "Clear Weather", desc: "Clears all weather effects on the board." },
+	frost: { name: "Biting Frost", desc: "Reduces the strength of all Close Combat units on the board to 1." },
+	fog: { name: "Impenetrable Fog", desc: "Reduces the strength of all Ranged Combat units on the board to 1." },
+	rain: { name: "Torrential Rain", desc: "Reduces the strength of all Siege Combat units on the board to 1." },
+	storm: { name: "Skellige Storm", desc: "Reduces the strength of all Ranged and Siege Combat units to 1." },
+	hero: { name: "Hero", desc: "Immune to all special cards, weather effects, and abilities." },
+	decoy: { name: "Decoy", desc: "Swap with a unit on the battlefield. Returns the unit to your hand." },
+	horn: { name: "Commander's Horn", desc: "Doubles the strength of all units in its row (max 1 per row)." },
+	mardroeme: { name: "Mardroeme", desc: "Transforms all Berserkers in the row into Bears." },
+	berserker: { name: "Berserker", desc: "Transforms into a Bear if a Mardroeme card is in its row." },
+	scorch: { name: "Scorch", desc: "Destroy the strongest card(s) on the battlefield." },
+	scorch_c: { name: "Scorch: Close Combat", desc: "Destroy the strongest Close Combat unit(s) if row strength is 10 or more." },
+	scorch_r: { name: "Scorch: Ranged Combat", desc: "Destroy the strongest Ranged Combat unit(s) if row strength is 10 or more." },
+	scorch_s: { name: "Scorch: Siege Combat", desc: "Destroy the strongest Siege Combat unit(s) if row strength is 10 or more." },
+	agile: { name: "Agile", desc: "Can be placed in Close or Ranged Combat row." },
+	muster: { name: "Muster", desc: "Play all cards with the same name from your hand and deck." },
+	spy: { name: "Spy", desc: "Place on opponent's board, draw 2 cards from your deck." },
+	medic: { name: "Medic", desc: "Choose one non-hero unit card from your discard pile to play instantly." },
+	morale: { name: "Morale Boost", desc: "Adds +1 to all other units in its row." },
+	bond: { name: "Tight Bond", desc: "Place next to cards of the same name to double their strength." },
+	avenger: { name: "Avenger", desc: "Summons a powerful unit when removed from the battlefield." },
+	avenger_kambi: { name: "Avenger", desc: "Summons Hemdall when removed from the battlefield." },
+	foltest_king: { name: "Foltest - King of Temeria", desc: "Play an Impenetrable Fog card from your deck." },
+	foltest_lord: { name: "Foltest - Lord Commander of the North", desc: "Clear all weather effects on the battlefield." },
+	foltest_siegemaster: { name: "Foltest - The Siegemaster", desc: "Doubles the strength of your Siege units (if no Horn in row)." },
+	foltest_steelforged: { name: "Foltest - The Steel-Forged", desc: "Destroy strongest enemy Siege unit(s) if row total is 10 or more." },
+	foltest_son: { name: "Foltest - Son of Medell", desc: "Destroy strongest enemy Ranged unit(s) if row total is 10 or more." },
+	emhyr_imperial: { name: "Emhyr var Emreis - His Imperial Majesty", desc: "Play a Torrential Rain card from your deck." },
+	emhyr_emperor: { name: "Emhyr var Emreis - Emperor of Nilfgaard", desc: "Look at 3 random cards from your opponent's hand." },
+	emhyr_whiteflame: { name: "Emhyr var Emreis - the White Flame", desc: "Cancel your opponent's leader ability." },
+	emhyr_relentless: { name: "Emhyr var Emreis - The Relentless", desc: "Draw a card from your opponent's discard pile." },
+	emhyr_invader: { name: "Emhyr var Emreis - Invader of the North", desc: "Medic abilities return a random unit. Affects both players." },
+	eredin_commander: { name: "Eredin - Commander of the Red Riders", desc: "Doubles Close Combat row strength (if no Horn in row)." },
+	eredin_bringer_of_death: { name: "Eredin - Bringer of Death", desc: "Restore a card from your discard pile to your hand." },
+	eredin_destroyer: { name: "Eredin - Destroyer of Worlds", desc: "Discard 2 cards to draw any 1 card from your deck." },
+	eredin_king: { name: "Eredin - King of the Wild Hunt", desc: "Play a weather card from your deck." },
+	eredin_treacherous: { name: "Eredin Bréacc Glas - The Treacherous", desc: "Doubles the strength of all spies (affects both players)." },
+	francesca_queen: { name: "Francesca - Queen of Dol Blathanna", desc: "Destroy strongest enemy Close unit(s) if row total is 10 or more." },
+	francesca_beautiful: { name: "Francesca - the Beautiful", desc: "Doubles Ranged Combat row strength (if no Horn in row)." },
+	francesca_daisy: { name: "Francesca - Daisy of the Valley", desc: "Draw an extra card at the start of the battle." },
+	francesca_pureblood: { name: "Francesca - Findabair", desc: "Play a Biting Frost card from your deck." },
+	francesca_hope: { name: "Francesca - Hope of the Aen Seidhe", desc: "Move agile units to optimize row strength." },
+	crach_an_craite: { name: "Crach an Craite", desc: "Reshuffle all graveyard cards into both decks." },
+	king_bran: { name: "King Bran", desc: "Units lose only half strength in bad weather." }
+};
+
+for (const key in ability_dict) {
+	const ab = ability_dict[key];
+	const trans = ABILITY_TRANSLATIONS[key];
+	if (trans) {
+		const ruName = ab.name || "";
+		const ruDesc = ab.description || "";
+		Object.defineProperty(ab, "name", {
+			get: () => (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? trans.name : ruName,
+			configurable: true
+		});
+		Object.defineProperty(ab, "description", {
+			get: () => (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? trans.desc : ruDesc,
+			configurable: true
+		});
+	}
+}

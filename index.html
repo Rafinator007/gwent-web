@@ -8,7 +8,7 @@
 	<meta name="author" content="Arun Sundaram" />
 	<meta name="description" content="Играйте в оригинальный Гвинт из игры Ведьмак 3 прямо в браузере! Включает карты из Каменных Сердец и Крови и Вина!" />
 	<meta name="keywords" content="arun, sundaram, programmer, gwent, tw3, witcher, card, game, gamedev, play" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 	<link rel="stylesheet" type="text/css" href="style.css" />
 </head>
 
@@ -86,7 +86,7 @@
 	</section>
 	
 	<section id="panel-mid" class="panel">
-		<div id="op-hand-counter">Карты соперника: 10</div>
+		<!-- Removed op-hand-counter -->
 		<section id="field-op" class="field">
 			<div class="field-row" data-row="siege">
 				<div class="row-score center">12</div>
@@ -170,6 +170,7 @@
 			<div></div>
 			<h1></h1>
 			<p></p>
+			<button id="carousel-select-btn" class="hide" onclick="Carousel.curr.select(event)">Выбрать</button>
 		</div>
 		<div></div>
 	</section>
@@ -239,14 +240,14 @@
 	</div>
 	<p id="faction-description"></p>
 	
-	<label id="upload-deck" class="deck-options">
-		<input type="file" id="add-file" value="Импорт" style="display:none;"/>
-		Загрузить колоду
-	</label>
-	
-	<a id="change-faction" class="deck-options">Сменить фракцию</a>
-	
-	<a id="download-deck" class="deck-options">Скачать колоду</a>
+	<div class="deck-options-container">
+		<label id="upload-deck" class="deck-options">
+			<input type="file" id="add-file" value="Импорт" style="display:none;"/>
+			Загрузить колоду
+		</label>
+		<a id="change-faction" class="deck-options">Сменить фракцию</a>
+		<a id="download-deck" class="deck-options">Скачать колоду</a>
+	</div>
 	<a id="download-json" style="display:none;"></a>
 	
 	<h2 id="card-bank-title" class="card-contianer-title">Коллекция карт</h2>
@@ -280,9 +281,12 @@
 		<div class="center">
 			<button id="op-preview-open" class="hide" data-title="Просмотреть колоду соперника"></button>
 			<div id="op-preview-faction" class="hide"></div>
-			<label id="op-preview-leader" for="add-opponent" data-title="Загрузить колоду соперника">
-				<input type="file" id="add-opponent" style="display:none;"/>
+			<div id="op-preview-leader" data-title="Выбрать лидера/фракцию соперника">
 				<p>Случайная</p>
+			</div>
+			<label id="op-preview-upload" for="add-opponent" data-title="Загрузить колоду соперника">
+				<input type="file" id="add-opponent" style="display:none;"/>
+				Импорт
 			</label>
 			<button id="op-preview-clear" class="hide" data-title="Очистить колоду соперника"></button>
 		</div>
@@ -318,6 +322,7 @@
 <div data-title="Вкл/Выкл музыку" id="toggle-music" class="center deck-menu settings-button"><img src="svg/music.svg"></div>
 <div data-title="Вкл/Выкл звуки" id="toggle-sfx" class="center deck-menu settings-button"><img src="svg/sfx.svg"></div>
 <div data-title="Вкл/Выкл уведомления" id="toggle-notifications" class="center deck-menu settings-button"><img src="svg/notification.svg"></div>
+<div id="toggle-lang" class="center deck-menu settings-button">RU</div>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script type="text/javascript" src="common.js"></script>
