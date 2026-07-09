@@ -3933,20 +3933,31 @@ function onYouTubeIframeAPIReady() {
 /*----------------------------------------------------*/
 
 
-const eventManager = new EventManager(); 
-let userInteracted = false;
-var ui = new UI();
-var board = new Board();
-var weather = new Weather();
-var game = new Game();
+var eventManager;
+var userInteracted = false;
+var ui;
+var board;
+var weather;
+var game;
 var player_me, player_op;
-AudioManager.init();
-ui.initYouTube();
+var dm;
 
-ui.enablePlayer(false);
-let dm = new DeckMaker();
+try {
+	eventManager = new EventManager(); 
+	ui = new UI();
+	board = new Board();
+	weather = new Weather();
+	game = new Game();
+	AudioManager.init();
+	ui.initYouTube();
 
-document.addEventListener('click', () => userInteracted = true, { once: true });
+	ui.enablePlayer(false);
+	dm = new DeckMaker();
+
+	document.addEventListener('click', () => userInteracted = true, { once: true });
+} catch (err) {
+	alert("STARTUP ERROR: " + err.message + "\nStack: " + err.stack);
+}
 
 // ─── Интеграция мультиплеера ─────────────────────────────────────────
 
