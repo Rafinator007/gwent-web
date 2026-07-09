@@ -2759,11 +2759,6 @@ class Carousel {
 	async select(event) {
 		(event || window.event).stopPropagation();
 
-		// If selection button is active, only allow selecting via the select button itself
-		if (!this.isViewOnly && this.count > 0 && event && event.target !== this.selectBtn) {
-			return; // Ignore middle card clicks for selection
-		}
-
 		--this.count;
 		if (this.isLastSelection()) {
 			this.elem.classList.add("hide");
