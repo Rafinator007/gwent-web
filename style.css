@@ -1717,6 +1717,7 @@ main { background-image: url('img/boardtest8.png'); }
 	cursor: pointer;
 	transition: all 0.2s;
 	font-family: inherit;
+	pointer-events: auto !important;
 }
 #carousel-select-btn:hover {
 	box-shadow: 0 0 0.8vw #c9a054;
