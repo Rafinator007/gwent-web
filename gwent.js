@@ -2757,25 +2757,29 @@ class Carousel {
 	
 	// Called by client to perform action on the middle card in focus
 	async select(event) {
-		(event || window.event).stopPropagation();
+		try {
+			(event || window.event).stopPropagation();
 
-		--this.count;
-		if (this.isLastSelection()) {
-			this.elem.classList.add("hide");
-			if (this.selectBtn) this.selectBtn.classList.add("hide");
+			--this.count;
+			if (this.isLastSelection()) {
+				this.elem.classList.add("hide");
+				if (this.selectBtn) this.selectBtn.classList.add("hide");
+			}
+			if (this.count <= 0)
+				ui.enablePlayer(false);
+			
+			let selectedIndex = this.indices[this.index];
+			if (isMultiplayer && game.state === GameState.PLAYING && game.currPlayer === player_me) {
+				socket.emit('game_action', { type: 'CAROUSEL_SELECT', index: selectedIndex });
+			}
+			
+			await this.action(this.container, selectedIndex);
+			if (this.isLastSelection() && !this.cancelled)
+				return this.exit();
+			this.update();
+		} catch (err) {
+			alert("CAROUSEL SELECT ERROR: " + err.message + "\nStack: " + err.stack);
 		}
-		if (this.count <= 0)
-			ui.enablePlayer(false);
-		
-		let selectedIndex = this.indices[this.index];
-		if (isMultiplayer && game.state === GameState.PLAYING && game.currPlayer === player_me) {
-			socket.emit('game_action', { type: 'CAROUSEL_SELECT', index: selectedIndex });
-		}
-		
-		await this.action(this.container, selectedIndex);
-		if (this.isLastSelection() && !this.cancelled)
-			return this.exit();
-		this.update();
 	}
 	
 	// Called by client to exit out of the current Carousel if allowed. Enables player interraction.
