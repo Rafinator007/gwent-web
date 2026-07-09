@@ -2244,10 +2244,25 @@ class UI {
 					const elements = document.querySelectorAll(selector);
 					elements.forEach(elem => {
 						if (translations.text !== undefined) {
-							if (elem.children.length === 0) {
-								elem.innerText = translations.text;
-							} else {
-								elem.firstChild.textContent = translations.text;
+							let textNodeFound = false;
+							for (let child of elem.childNodes) {
+								if (child.nodeType === 3 && child.textContent.trim().length > 0) {
+									child.textContent = translations.text;
+									textNodeFound = true;
+									break;
+								}
+							}
+							if (!textNodeFound) {
+								if (elem.children.length === 0) {
+									elem.textContent = translations.text;
+								} else {
+									let lastChild = elem.lastChild;
+									if (lastChild && lastChild.nodeType === 3) {
+										lastChild.textContent = translations.text;
+									} else {
+										elem.appendChild(document.createTextNode(translations.text));
+									}
+								}
 							}
 						}
 						if (translations.title !== undefined) {
