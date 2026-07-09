@@ -1229,7 +1229,9 @@ class Row extends CardContainer {
 			return total;
 		if (this.effects.weather)
 		{
-			const weatherMin = this.effects.halfWeather ? Math.floor(total/2) : 1;
+			// halfWeather (King Bran): lose half strength, rounded UP (ceiling), minimum 1
+			// normal weather: reduce to 1
+			const weatherMin = this.effects.halfWeather ? Math.max(1, Math.ceil(total / 2)) : 1;
 			total = Math.min(weatherMin, total);
 		}
 		if (game.doubleSpyPower && card.abilities.includes("spy"))
@@ -3769,6 +3771,17 @@ async function handleOpponentAction(action) {
 		}
 		case 'LEADER': {
 			await player_op.activateLeader();
+			break;
+		}
+		case 'NILFGAARD_GRAVE_PICK': {
+			// Opponent (Nilfgaard player) took a card at action.graveIndex from our grave
+			// We need to remove it from our (player_me's) grave and add to opponent's hand
+			const stolenCard = player_me.grave.cards[action.graveIndex];
+			if (stolenCard) {
+				stolenCard.holder = player_op;
+				player_me.grave.removeCard(stolenCard);
+				player_op.hand.addCard(stolenCard);
+			}
 			break;
 		}
 		case 'REDRAW_CARD': {

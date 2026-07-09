@@ -336,6 +336,10 @@ var ability_dict = {
 			}
 			Carousel.curr?.cancel();
 			await ui.queueCarousel(grave, 1, async (c,i) => {
+				// Emit sync event to opponent BEFORE removing from grave
+				if (isMultiplayer && game.currPlayer === player_me && socket) {
+					socket.emit('game_action', { type: 'NILFGAARD_GRAVE_PICK', graveIndex: i });
+				}
 				let newCard = c.cards[i];
 				newCard.holder = card.holder;
 				await board.toHand(newCard, grave);
