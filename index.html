@@ -241,6 +241,7 @@
 	</section>
 	
 
+
 </main>
 
 <section id="deck-customization">
@@ -256,6 +257,7 @@
 		</label>
 		<a id="change-faction" class="deck-options">Сменить фракцию</a>
 		<a id="download-deck" class="deck-options">Скачать колоду</a>
+		<a id="toggle-tournament" class="deck-options" style="cursor:pointer;">Режим: Классический</a>
 	</div>
 	<a id="download-json" style="display:none;"></a>
 	
@@ -280,9 +282,14 @@
 		<p>0</p>
 		<p>Карты-герои</p>
 		<p>0</p>
+		<p class="tournament-stat hide">Шпионы</p>
+		<p class="tournament-stat hide">0</p>
+		<p class="tournament-stat hide">Медики</p>
+		<p class="tournament-stat hide">0</p>
 	</div>
-	<button id="start-game">Против ПК</button>
-	<button id="start-multiplayer">Против друга</button>
+	<button id="toggle-vs-pc" class="active">Против ПК</button>
+	<button id="toggle-vs-friend">Против друга</button>
+	<button id="start-match">Играть</button>
 	<div id="opponent-preview" class="center">
 		<div>
 			<p>Колода соперника</p>
@@ -332,6 +339,16 @@
 <div data-title="Вкл/Выкл звуки" id="toggle-sfx" class="center deck-menu settings-button"><img src="svg/sfx.svg"></div>
 <div data-title="Вкл/Выкл уведомления" id="toggle-notifications" class="center deck-menu settings-button"><img src="svg/notification.svg"></div>
 <div id="toggle-lang" class="center deck-menu settings-button">RU</div>
+
+<!-- Fullscreen button -->
+<button id="fullscreen-btn" title="Полный экран (F11 / ESC)">
+	<svg viewBox="0 0 24 24">
+		<polyline id="fs-icon-expand" points="8 3 3 3 3 8"></polyline>
+		<polyline id="fs-icon-expand2" points="21 8 21 3 16 3"></polyline>
+		<polyline id="fs-icon-expand3" points="3 16 3 21 8 21"></polyline>
+		<polyline id="fs-icon-expand4" points="16 21 21 21 21 16"></polyline>
+	</svg>
+</button>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script type="text/javascript" src="common.js"></script>

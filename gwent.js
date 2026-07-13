@@ -36,6 +36,7 @@ class ControllerNetwork {
 // Переменные мультиплеера
 var socket = null;
 var isMultiplayer = false;
+var isTournamentMode = false;
 var myPlayerIndex = 0; // 0 = host, 1 = guest
 var multiplayerSeed = null;
 var opponentDeckData = null;
@@ -546,6 +547,12 @@ class Player {
 		this.setPassed(false);
 		document.getElementById("gem1-" +this.tag).classList.add("gem-on");
 		document.getElementById("gem2-" +this.tag).classList.add("gem-on");
+		
+		let scoreTotal = document.getElementById("score-total-" + this.tag);
+		if (scoreTotal) {
+			scoreTotal.children[0].innerHTML = "0";
+			scoreTotal.classList.remove("score-leader");
+		}
 	}
 	
 	// Returns the opponent Player
@@ -1565,6 +1572,12 @@ class Game {
 		EventManager.gameOpened.dispatch();
 		this.initPlayers(player_me, player_op);
 		this.setState(GameState.PLAYING);
+		
+		['toggle-music', 'toggle-sfx', 'toggle-notifications', 'toggle-lang'].forEach(id => {
+			let el = document.getElementById(id);
+			if (el) el.classList.remove('deck-menu');
+		});
+		
 		AudioManager.playSFX('game_opening');
 		await this.runEffects(this.gameStart);
 		await this.coinToss();
@@ -1683,8 +1696,11 @@ class Game {
 		if (this.currPlayer === player_me)
 			ui.enablePlayer(false);
 		await this.runEffects(this.turnEnd);
-		if (this.currPlayer.passed)
-			await ui.notification(this.currPlayer.tag + "-pass", 1200);
+		if (this.currPlayer.passed) {
+			// If opponent just passed and the player hasn't, show the extra 'winning' notification
+			const opJustPassedAndPlayerAlive = (this.currPlayer === player_op) && !player_me.passed;
+			await ui.notification(opJustPassedAndPlayerAlive ? "op-pass-winning" : this.currPlayer.tag + "-pass", 1800);
+		}
 		if (player_op.passed && player_me.passed)
 			this.endRound();
 		else
@@ -1804,7 +1820,14 @@ class Game {
 		restoreRandom();
 		EventManager.customizationOpened.dispatch();
 		this.endScreen.classList.add("hide");
+		window.scrollTo(0, 0);
 		document.getElementById("deck-customization").classList.remove("hide");
+		
+		['toggle-music', 'toggle-sfx', 'toggle-notifications', 'toggle-lang'].forEach(id => {
+			let el = document.getElementById(id);
+			if (el) el.classList.add('deck-menu');
+		});
+		
 		AudioManager.playSFX('menu_opening');
 		this.setState(GameState.CUSTOMIZE);
 	}
@@ -1813,6 +1836,7 @@ class Game {
 	{
 		this.reset();
 		player_me.reset();
+		if (typeof player_op !== 'undefined' && player_op) player_op.reset();
 		player_op = new Player('op', 'Player 2', dm.constructOpponentDeck(false));
 		this.endScreen.classList.add("hide");
 		this.startGame();
@@ -2684,6 +2708,13 @@ class Carousel {
 					}
 				}
 			}, { passive: true });
+			
+			// Mouse wheel for PC
+			Carousel.elem.addEventListener('wheel', (e) => {
+				if (e.deltaY !== 0) {
+					Carousel.curr?.shift(e, e.deltaY > 0 ? 1 : -1);
+				}
+			}, { passive: true });
 		}
 		this.elem = Carousel.elem;
 		document.getElementsByTagName("main")[0].classList.remove("noclick");
@@ -2899,9 +2930,41 @@ class DeckMaker {
 		this.elem = document.getElementById("deck-customization");
 		this.bank_elem = document.getElementById("card-bank");
 		this.deck_elem = document.getElementById("card-deck");
+		
+		const wheelScroll = (e) => {
+			const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+			if (delta !== 0) {
+				e.preventDefault();
+				e.stopPropagation();
+				e.currentTarget.scrollTop += delta > 0 ? 90 : -90;
+			}
+		};
+		const addWheel = (el) => {
+			el.addEventListener('wheel', wheelScroll, { passive: false });
+			// also catch when pointer is over child cards inside the container
+			el.addEventListener('mouseover', () => { el._wheelActive = true; });
+			el.addEventListener('mouseout',  () => { el._wheelActive = false; });
+		};
+		addWheel(this.bank_elem);
+		addWheel(this.deck_elem);
+		// Global fallback: when wheel fires on a card inside bank/deck, bubble up
+		window.addEventListener('wheel', (e) => {
+			if (this.bank_elem._wheelActive) {
+				const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+				e.preventDefault();
+				this.bank_elem.scrollTop += delta > 0 ? 90 : -90;
+			} else if (this.deck_elem._wheelActive) {
+				const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+				e.preventDefault();
+				this.deck_elem.scrollTop += delta > 0 ? 90 : -90;
+			}
+		}, { passive: false });
+		
 		this.leader_elem = document.getElementById("card-leader");
 		this.leader_elem.children[1].addEventListener("click", () => this.selectLeader(), false);
 		this.leader_elem.children[1].addEventListener('mouseenter', CLICK_EVENT_SFX);
+		// Scroll to top so game board doesn't peek
+		window.scrollTo(0, 0);
 		this.loadFactionDeck(Settings.lastFaction.get(), true);
 
 		this.opponentData = Settings.opponentDeckCustom.get();
@@ -2909,23 +2972,77 @@ class DeckMaker {
 		document.getElementById('op-preview-clear').addEventListener('click', () => this.clearOpponentDeck());
 		document.getElementById('op-preview-open').addEventListener('click', ()=>this.viewOponentCards());
 		document.getElementById("add-opponent").addEventListener("change", () => this.uploadOpponentDeck(), false);
-		document.getElementById('op-preview-faction').addEventListener('click', () => this.selectOpponentFaction());
-		document.getElementById('op-preview-leader').addEventListener('click', () => {
-			if (isEmpty(this.opponentData)) {
-				this.selectOpponentFaction();
-			} else {
-				this.selectOpponentLeader();
-			}
-		});
-
+		const opFactionBtn = document.getElementById('op-preview-faction');
+		const opLeaderBtn = document.getElementById('op-preview-leader');
+		if (opFactionBtn && opLeaderBtn) {
+			opFactionBtn.addEventListener('click', () => this.selectOpponentFaction());
+			opLeaderBtn.addEventListener('click', () => {
+				if (isEmpty(this.opponentData)) {
+					this.selectOpponentFaction();
+				} else {
+					this.selectOpponentLeader();
+				}
+			});
+		}
 
 		this.change_elem = document.getElementById("change-faction");
 		this.change_elem.addEventListener("click", () => this.selectFaction(), false);
 		
+		this.tournament_elem = document.getElementById("toggle-tournament");
+		if (this.tournament_elem) {
+			this.tournament_elem.addEventListener("click", () => {
+				isTournamentMode = !isTournamentMode;
+				const isEn = (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en");
+				if (isTournamentMode) {
+					this.tournament_elem.innerHTML = isEn ? "Mode: Tournament" : "Режим: Турнирный";
+				} else {
+					this.tournament_elem.innerHTML = isEn ? "Mode: Classic" : "Режим: Классический";
+				}
+				let elements = document.querySelectorAll(".tournament-stat");
+				if (isTournamentMode) {
+					elements.forEach(e => e.classList.remove("hide"));
+				} else {
+					elements.forEach(e => e.classList.add("hide"));
+				}
+				this.update();
+			});
+		}
+		
 		document.getElementById("download-deck").addEventListener("click", () => this.downloadDeck(), false);
 		document.getElementById("add-file").addEventListener("change", () => this.uploadPlayerDeck(), false);
-		document.getElementById("start-game").addEventListener("click", () => this.startNewGame(), false);
-		document.getElementById("start-game").addEventListener("mouseenter", CLICK_EVENT_SFX, false);
+		
+		this.vsPcBtn = document.getElementById("toggle-vs-pc");
+		this.vsFriendBtn = document.getElementById("toggle-vs-friend");
+		this.startMatchBtn = document.getElementById("start-match");
+		this.opponentPreview = document.getElementById("opponent-preview");
+
+		this.isMultiplayerSelected = false;
+
+		if (this.vsPcBtn && this.vsFriendBtn) {
+			this.vsPcBtn.addEventListener("click", () => {
+				this.isMultiplayerSelected = false;
+				this.vsPcBtn.classList.add("active");
+				this.vsFriendBtn.classList.remove("active");
+				if (this.opponentPreview) this.opponentPreview.classList.remove("hide");
+			});
+			this.vsFriendBtn.addEventListener("click", () => {
+				this.isMultiplayerSelected = true;
+				this.vsFriendBtn.classList.add("active");
+				this.vsPcBtn.classList.remove("active");
+				if (this.opponentPreview) this.opponentPreview.classList.add("hide");
+			});
+		}
+
+		if (this.startMatchBtn) {
+			this.startMatchBtn.addEventListener("click", () => {
+				if (this.isMultiplayerSelected) {
+					this.startMultiplayerGame();
+				} else {
+					this.startNewGame();
+				}
+			});
+			this.startMatchBtn.addEventListener("mouseenter", CLICK_EVENT_SFX, false);
+		}
 	}
 
 	loadFactionDeck(faction, force = false)
@@ -3034,7 +3151,7 @@ class DeckMaker {
 			else
 				x.elem.classList.add("hide");
 		}
-		let total = 0, units = 0, special = 0, strength = 0, hero = 0;
+		let total = 0, units = 0, special = 0, strength = 0, hero = 0, spies = 0, medics = 0;
 		for (let x of this.deck) {
 			let card_data = card_dict[x.index];
 			if (x.count)
@@ -3048,10 +3165,14 @@ class DeckMaker {
 			}
 			units += x.count;
 			strength += card_data.strength * x.count;
-			if (card_data.ability.split(" ").includes("hero"))
-				hero += x.count;
+			if (card_data.ability) {
+				let abilities = card_data.ability.split(" ");
+				if (abilities.includes("hero")) hero += x.count;
+				if (abilities.includes("spy")) spies += x.count;
+				if (abilities.includes("medic")) medics += x.count;
+			}
 		}
-		this.stats = {total: total, units: units, special: special, strength: strength, hero: hero};
+		this.stats = {total: total, units: units, special: special, strength: strength, hero: hero, spies: spies, medics: medics};
 		this.updateFauxCard(this.bank_elem);
 		this.updateFauxCard(this.deck_elem);
 		this.updateStats();
@@ -3082,12 +3203,17 @@ class DeckMaker {
 		let stats = document.getElementById("deck-stats");
 		stats.children[1].innerHTML = this.stats.total;
 		stats.children[3].innerHTML = this.stats.units +(this.stats.units < 22 ? "/22" : "");
-		stats.children[5].innerHTML = this.stats.special + "/10";
-		stats.children[7].innerHTML = this.stats.strength;
+		stats.children[5].innerHTML = this.stats.special + (isTournamentMode ? "/5" : "/10");
+		stats.children[7].innerHTML = this.stats.strength + (isTournamentMode ? "/130" : "");
 		stats.children[9].innerHTML = this.stats.hero;
+		stats.children[11].innerHTML = this.stats.spies + (isTournamentMode ? "/2" : "");
+		stats.children[13].innerHTML = this.stats.medics + (isTournamentMode ? "/2" : "");
 		
 		stats.children[3].style.color = this.stats.units < 22 ? "red" : "";
-		stats.children[5].style.color = (this.stats.special > 10) ? "red" : "";
+		stats.children[5].style.color = (this.stats.special > (isTournamentMode ? 5 : 10)) ? "red" : "";
+		stats.children[7].style.color = (isTournamentMode && this.stats.strength > 130) ? "red" : "";
+		stats.children[11].style.color = (isTournamentMode && this.stats.spies > 2) ? "red" : "";
+		stats.children[13].style.color = (isTournamentMode && this.stats.medics > 2) ? "red" : "";
 	}
 	
 	// Opens a Carousel to allow the client to select a leader for their deck
@@ -3171,8 +3297,13 @@ class DeckMaker {
 		let warning = "";
 		if (this.stats.units < 22)
 			warning += "В вашей колоде должно быть не менее 22 карт отрядов. \n";
-		if (this.stats.special > 10)
-			warning += "В вашей колоде должно быть не более 10 специальных карт. \n";
+		if (this.stats.special > (isTournamentMode ? 5 : 10))
+			warning += "В вашей колоде должно быть не более " + (isTournamentMode ? 5 : 10) + " специальных карт. \n";
+		if (isTournamentMode) {
+			if (this.stats.strength > 130) warning += "В турнирном режиме общая сила не должна превышать 130.\n";
+			if (this.stats.spies > 2) warning += "В турнирном режиме допускается не более 2 шпионов.\n";
+			if (this.stats.medics > 2) warning += "В турнирном режиме допускается не более 2 медиков.\n";
+		}
 		if (warning != "")
 		{
 			AudioManager.playSFX("warning");
@@ -3193,15 +3324,53 @@ class DeckMaker {
 		game.startGame();
 	}
 
+	startMultiplayerGame() {
+		let warning = "";
+		if (this.stats.units < 22)
+			warning += "В вашей колоде должно быть не менее 22 карт отрядов. \n";
+		if (this.stats.special > (isTournamentMode ? 5 : 10))
+			warning += "В вашей колоде должно быть не более " + (isTournamentMode ? 5 : 10) + " специальных карт. \n";
+		if (isTournamentMode) {
+			if (this.stats.strength > 130) warning += "В турнирном режиме общая сила не должна превышать 130.\n";
+			if (this.stats.spies > 2) warning += "В турнирном режиме допускается не более 2 шпионов.\n";
+			if (this.stats.medics > 2) warning += "В турнирном режиме допускается не более 2 медиков.\n";
+		}
+		if (warning != "") {
+			AudioManager.playSFX("warning");
+			return alert(warning);
+		}
+		
+		localDeckData = { 
+			faction: this.faction,
+			leader: card_dict[this.leader.index], 
+			cards: this.deck.filter(x => x.count > 0)
+		};
+		
+		isMultiplayer = true;
+		
+		document.getElementById('multiplayer-lobby').classList.remove('hide');
+		document.getElementById('lobby-initial-actions').classList.remove('hide');
+		document.getElementById('lobby-waiting').classList.add('hide');
+		document.getElementById('lobby-status').innerText = "Выберите действие ниже";
+		document.getElementById('room-code-input').value = "";
+		
+		initMultiplayer();
+	}
+
+
 	constructOpponentDeck(useCustom = true)
 	{
 		let op_deck;
 		if (!useCustom || isEmpty(dm.opponentData))
 		{
-			op_deck = JSON.parse( premade_deck[randomInt(Object.keys(premade_deck).length)] );
-			op_deck.cards = op_deck.cards.map(c => ({index:c[0], count:c[1]}) );
-			const leaders = card_dict.filter(c => c.row === "leader" && c.deck === op_deck.faction);
-			op_deck.leader = leaders[randomInt(leaders.length)];
+			if (isTournamentMode) {
+				op_deck = this.generateTournamentDeck("", "");
+			} else {
+				op_deck = JSON.parse( premade_deck[randomInt(Object.keys(premade_deck).length)] );
+				op_deck.cards = op_deck.cards.map(c => ({index:c[0], count:c[1]}) );
+				const leaders = card_dict.filter(c => c.row === "leader" && c.deck === op_deck.faction);
+				op_deck.leader = leaders[randomInt(leaders.length)];
+			}
 		}
 		else
 		{
@@ -3211,6 +3380,80 @@ class DeckMaker {
 			op_deck.faction = op_deck.leader.deck;
 		}
 		return op_deck;
+	}
+
+	generateTournamentDeck(forcedFaction, forcedLeader) {
+		const factionsList = ["realms", "nilfgaard", "scoiatael", "monsters", "skellige"];
+		const faction = forcedFaction || factionsList[randomInt(factionsList.length)];
+		const leaders = card_dict.map((c,i) => ({index: i, card:c}) ).filter(c => c.card.deck === faction && c.card.row === "leader");
+		const leader = forcedLeader ? card_dict[Number(forcedLeader)] : leaders[randomInt(leaders.length)].card;
+
+		let pool = [];
+		card_dict.forEach((c, i) => {
+			if ((c.deck === faction || c.deck === "neutral" || c.deck === "special" || c.deck === "weather") && c.row !== "leader") {
+				for (let j = 0; j < c.count; j++) {
+					pool.push({index: i, card: c});
+				}
+			}
+		});
+		
+		let deckCards = {};
+		let spies = 0, medics = 0, specials = 0, units = 0, power = 0;
+		pool = pool.sort(() => Math.random() - 0.5);
+		
+		for (let p of pool) {
+			if (units >= 22) break;
+			if (p.card.deck === "special" || p.card.deck === "weather") continue;
+			
+			let abilities = p.card.ability ? p.card.ability.split(" ") : [];
+			if (abilities.includes("spy")) {
+				if (spies >= 2) continue;
+				spies++;
+			}
+			if (abilities.includes("medic")) {
+				if (medics >= 2) continue;
+				medics++;
+			}
+			let cardPower = p.card.strength;
+			if (power + cardPower > 130 && units < 21) continue; 
+			if (power + cardPower <= 130 || (power + cardPower > 130 && units >= 21)) {
+				if (power + cardPower > 130 && cardPower > 0) continue;
+				deckCards[p.index] = (deckCards[p.index] || 0) + 1;
+				power += cardPower;
+				units++;
+			}
+		}
+		
+		if (units < 22) {
+			let sortedPool = pool.filter(p => p.card.deck !== "special" && p.card.deck !== "weather").sort((a,b) => a.card.strength - b.card.strength);
+			for (let p of sortedPool) {
+				if (units >= 22) break;
+				let currentCount = deckCards[p.index] || 0;
+				if (currentCount > 0) continue; // Already added in previous phase or trying to avoid duplicates when struggling
+				
+				let abilities = p.card.ability ? p.card.ability.split(" ") : [];
+				if (abilities.includes("spy") && spies >= 2) continue;
+				if (abilities.includes("medic") && medics >= 2) continue;
+				
+				deckCards[p.index] = currentCount + 1;
+				units++;
+				if (abilities.includes("spy")) spies++;
+				if (abilities.includes("medic")) medics++;
+			}
+		}
+
+		let specialPool = pool.filter(p => p.card.deck === "special" || p.card.deck === "weather");
+		for (let p of specialPool) {
+			if (specials >= 5) break;
+			deckCards[p.index] = (deckCards[p.index] || 0) + 1;
+			specials++;
+		}
+		
+		return {
+			faction: faction,
+			leader: leader,
+			cards: Object.keys(deckCards).map(idx => ({index: Number(idx), count: deckCards[idx]}))
+		};
 	}
 	
 	// Converts the current deck to a JSON string
@@ -3416,22 +3659,79 @@ class DeckMaker {
 		const factionElem = document.getElementById('op-preview-faction');
 		const leaderElem = document.getElementById('op-preview-leader');
 		const buttons = ['op-preview-clear', 'op-preview-open'].map(id=>document.getElementById(id));
-		const pText = leaderElem.querySelector('p');
+		const pText = leaderElem ? leaderElem.querySelector('p') : null;
 		if (isEmpty(this.opponentData))
 		{
 			if (pText) {
 				pText.innerHTML = (Settings.language && Settings.language.get() === "en") ? "Random" : "Случайная";
 			}
-			[factionElem, ...buttons].forEach(e=>e.classList.add('hide'));
+			if (factionElem) factionElem.classList.add('hide');
+			buttons.forEach(e=>e.classList.add('hide'));
 		}
 		else
 		{
-			factionElem.style.setProperty('background-image', iconURL('deck_shield_' + this.opponentData.faction));
+			if (factionElem) {
+				factionElem.style.setProperty('background-image', iconURL('deck_shield_' + this.opponentData.faction));
+				factionElem.classList.remove('hide');
+			}
 			if (pText) {
 				pText.innerHTML = card_dict[this.opponentData.leader].name;
 			}
-			[factionElem, ...buttons].forEach(e=>e.classList.remove('hide'));
+			buttons.forEach(e=>e.classList.remove('hide'));
 		}
+	}
+
+	selectOpponentFaction() {
+		let container = new CardContainer();
+		container.cards = Object.keys(factions).map( f => {
+			return {abilities: [f], filename: f, desc_name: factions[f].name, desc: factions[f].description, faction: "faction"};
+		});
+		let currentFaction = this.opponentData ? this.opponentData.faction : "realms";
+		let index = container.cards.reduce((a,c,i) => c.filename === currentFaction ? i : a, 0);
+		ui.queueCarousel(container, 1, (c,i) => {
+			const faction_name = c.cards[i].filename;
+			const faction_deck_str = premade_deck.find(d => JSON.parse(d).faction === faction_name);
+			if (faction_deck_str) {
+				const faction_deck = JSON.parse(faction_deck_str);
+				this.opponentData = {
+					faction: faction_name,
+					leader: faction_deck.leader,
+					cards: faction_deck.cards.map(cardArr => ({index: cardArr[0], count: cardArr[1]}))
+				};
+				Settings.opponentDeckCustom.set(this.opponentData);
+				this.updatedCustomOpponent();
+			}
+		}, () => true, false, true);
+		Carousel.curr.index = index;
+		Carousel.curr.update();
+	}
+
+	selectOpponentLeader() {
+		if (!this.opponentData || !this.opponentData.faction) return;
+		const faction_name = this.opponentData.faction;
+		const leaders = card_dict.map((c,i) => ({index: i, card:c}) )
+			.filter(c => c.card.deck === faction_name && c.card.row === "leader");
+		
+		let container = new CardContainer();
+		container.cards = leaders.map(c => {
+			let card = new Card(c.card, player_op);
+			card.data = c;
+			return card;
+		});
+		
+		let currentLeaderIndex = this.opponentData.leader;
+		let index = leaders.findIndex(l => l.index === currentLeaderIndex);
+		if (index === -1) index = 0;
+
+		ui.queueCarousel(container, 1, (c,i) => {
+			let data = c.cards[i].data;
+			this.opponentData.leader = data.index;
+			Settings.opponentDeckCustom.set(this.opponentData);
+			this.updatedCustomOpponent();
+			AudioManager.playSFX('ui_card_bank');
+		}, () => true, false, true);
+		Carousel.curr.index = index;
+		Carousel.curr.update();
 	}
 
 	viewOponentCards()
@@ -4147,33 +4447,7 @@ function initMultiplayer() {
 	});
 }
 
-document.getElementById('start-multiplayer').addEventListener('click', () => {
-	let warning = "";
-	if (dm.stats.units < 22)
-		warning += "В вашей колоде должно быть не менее 22 карт отрядов. \n";
-	if (dm.stats.special > 10)
-		warning += "В вашей колоде должно быть не более 10 специальных карт. \n";
-	if (warning != "") {
-		AudioManager.playSFX("warning");
-		return alert(warning);
-	}
-	
-	localDeckData = { 
-		faction: dm.faction,
-		leader: card_dict[dm.leader.index], 
-		cards: dm.deck.filter(x => x.count > 0)
-	};
-	
-	isMultiplayer = true;
-	
-	document.getElementById('multiplayer-lobby').classList.remove('hide');
-	document.getElementById('lobby-initial-actions').classList.remove('hide');
-	document.getElementById('lobby-waiting').classList.add('hide');
-	document.getElementById('lobby-status').innerText = "Выберите действие ниже";
-	document.getElementById('room-code-input').value = "";
-	
-	initMultiplayer();
-});
+
 
 document.getElementById('btn-create-room').addEventListener('click', () => {
 	if (socket) {
@@ -4199,3 +4473,4 @@ document.getElementById('btn-cancel-lobby').addEventListener('click', () => {
 	}
 	isMultiplayer = false;
 });
+

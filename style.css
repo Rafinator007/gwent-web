@@ -58,6 +58,7 @@ html {
 	scrollbar-color: #5559 #131313; /* mozilla */
 }
 
+
 #click-background {
 	position: fixed;
 	width: 100%;
@@ -109,7 +110,7 @@ html {
 	position: absolute;
 	width: 2.5vw;
 	height: 2.5vw;
-	z-index: 1005;
+	z-index: 80; /* below deck-customization by default */
 }
 .settings-button>img{
 	width: 2.5vw;
@@ -133,9 +134,9 @@ html {
     left: 14vw;
 }
 #toggle-music.deck-menu { 
-	top: 45.3vw;
-	left: 46.7vw;
-	z-index: 86;
+	top: 51.5vw;
+	left: 5vw;
+	z-index: 90;
 }
 
 #toggle-sfx {
@@ -143,17 +144,23 @@ html {
     left: 17.2vw;
 }
 #toggle-sfx.deck-menu {
-	top: 45.3vw;
-	left: 50.1vw;
-	z-index: 86;
+	top: 51.5vw;
+	left: 9vw;
+	z-index: 90;
 }
 
 #toggle-notifications {
-	top: 48.9vw;
-    left: 20vw;
+	display: none !important;
 }
 #toggle-notifications.deck-menu {
 	display: none !important;
+}
+
+/* Hide settings buttons on game board when deck-customization is open */
+#toggle-music:not(.deck-menu),
+#toggle-sfx:not(.deck-menu),
+#toggle-lang:not(.deck-menu) {
+	z-index: 1005;
 }
 
 #pass-button[data-title]:hover::after
@@ -216,6 +223,9 @@ html {
 
 #notif-op-pass { background-image: url('img/icons/notif_round_passed.png'); }
 #notif-op-pass::after { content:"Соперник пасовал"; }
+
+#notif-op-pass-winning { background-image: url('img/icons/notif_round_passed.png'); }
+#notif-op-pass-winning::after { content:"Соперник пасовал — вы выигрываете раунд!"; }
 
 #notif-win-round { background-image: url('img/icons/notif_win_round.png'); } 
 #notif-win-round::after { content:"Вы выиграли раунд!"; }
@@ -1223,6 +1233,8 @@ main { background-image: url('img/boardtest8.png'); }
 	height: calc(100vw * 1080 / 1920);
 	background-color: rgba(10,10,10,.95);
 	z-index: 85;
+	top: 0;
+	left: 0;
 }
 
 #faction-title {
@@ -1390,44 +1402,86 @@ main { background-image: url('img/boardtest8.png'); }
 #deck-stats > p:nth-child(6) { background-image: url('img/icons/deck_stats_special.png'); }
 #deck-stats > p:nth-child(8) { background-image: url('img/icons/deck_stats_strength.png'); }
 #deck-stats > p:nth-child(10) { background-image: url('img/icons/deck_stats_hero.png'); }
+#deck-stats > p:nth-child(12) { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="%239f7d3e"><g transform="translate(0,6)"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></g></svg>'); }
+#deck-stats > p:nth-child(14) { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><g transform="translate(0,6)"><path fill="%239f7d3e" fill-rule="evenodd" clip-rule="evenodd" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35zM11 11H9v2h2v2h2v-2h2v-2h-2V9h-2v2z"/></g></svg>'); }
 
-#start-game {
+#toggle-vs-pc {
 	position: absolute;
-	top: 86%;
-	left: 42.5%;
-	width: 6.8%;
-	height: 3%;
-	font-size: 0.98vw;
+	top: 91%;
+	left: 58.5%;
+	width: 10%;
+	height: 4%;
+	font-size: 1.1vw;
 	white-space: nowrap;
-	color: white;
+	color: #82735f;
 	background-color: rgb(20,20,20);
-	border: 0.1vw ridge rgb(30,30,30);
+	border: 0.1vw solid rgb(40,40,40);
+	cursor: pointer;
+	border-radius: 0.2vw;
+	font-family: inherit;
+	z-index: 10;
 }
-#start-game:hover {
-	box-shadow: 0 0 0.75vw white;
+#toggle-vs-pc.active {
+	color: white;
+	border: 0.1vw solid #666;
+	box-shadow: 0 0 0.4vw #666;
+	background-color: rgb(30,30,30);
+}
+#toggle-vs-pc:hover {
+	background-color: rgb(30,30,30);
 }
 
-#start-multiplayer {
+#toggle-vs-friend {
 	position: absolute;
-	top: 86%;
-	left: 50.7%;
-	width: 6.8%;
-	height: 3%;
-	font-size: 0.98vw;
+	top: 91%;
+	left: 18%;
+	width: 14%;
+	height: 4%;
+	font-size: 1.1vw;
+	white-space: nowrap;
+	color: #82735f;
+	background-color: rgb(20,20,20);
+	border: 0.1vw solid rgb(40,40,40);
+	cursor: pointer;
+	border-radius: 0.2vw;
+	font-family: inherit;
+	z-index: 10;
+}
+#toggle-vs-friend.active {
+	color: white;
+	border: 0.1vw solid #c9a054;
+	box-shadow: 0 0 0.4vw #c9a054;
+	background-color: rgb(30,30,30);
+}
+#toggle-vs-friend:hover {
+	background-color: rgb(30,30,30);
+}
+
+#start-match {
+	position: absolute;
+	top: 91%;
+	left: 33%;
+	width: 8%;
+	height: 4%;
+	font-size: 1.1vw;
 	white-space: nowrap;
 	color: white;
 	background-color: rgb(20,20,20);
 	border: 0.1vw ridge rgb(120,90,40);
+	cursor: pointer;
+	z-index: 10;
+	font-family: inherit;
+	border-radius: 0.2vw;
 }
-#start-multiplayer:hover {
+#start-match:hover {
 	box-shadow: 0 0 0.75vw #c9a054;
 }
 
 #opponent-preview {
     position: absolute;
-    top: 50.9vw;
-	width: 100%;
-    left: -0.3vw;
+    top: 91%;
+	width: 25%;
+    left: 70%;
     justify-content: center;
     align-items: center;
 	flex-direction: column;
@@ -1446,9 +1500,11 @@ main { background-image: url('img/boardtest8.png'); }
     background-repeat: no-repeat;
 	height: 2vw;
 	width: 	2vw;
+	cursor: pointer;
+	transition: filter 0.15s ease;
 }
-#op-preview-faction {
-	/* visibility: hidden; */
+#op-preview-faction:hover {
+	filter: drop-shadow(0 0 4px rgba(201, 160, 84, 0.85)) brightness(1.2);
 }
 #op-preview-leader {
 	cursor: pointer;
@@ -1694,9 +1750,9 @@ main { background-image: url('img/boardtest8.png'); }
 	box-shadow: 0px 0px 2px black;
 }
 #toggle-lang.deck-menu {
-	top: 45.3vw;
-	left: 53.5vw;
-	z-index: 86;
+	top: 51.5vw;
+	left: 13vw;
+	z-index: 90;
 }
 #toggle-lang:hover {
 	filter: drop-shadow(0px 0px 3px rgba(255, 255, 255, 0.5));
@@ -1732,6 +1788,7 @@ main { background-image: url('img/boardtest8.png'); }
 .lang-en #notif-round-start::after { content: "Round starts" !important; }
 .lang-en #notif-me-pass::after { content: "Round passed" !important; }
 .lang-en #notif-op-pass::after { content: "Opponent passed" !important; }
+.lang-en #notif-op-pass-winning::after { content: "Opponent passed — you are winning the round!" !important; }
 .lang-en #notif-win-round::after { content: "You won the round!" !important; }
 .lang-en #notif-lose-round::after { content: "Opponent won the round" !important; }
 .lang-en #notif-draw-round::after { content: "Round ended in a draw" !important; }
