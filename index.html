@@ -341,12 +341,18 @@
 <div id="toggle-lang" class="center deck-menu settings-button">RU</div>
 
 <!-- Fullscreen button -->
-<button id="fullscreen-btn" title="Полный экран (F11 / ESC)">
+<button id="fullscreen-btn" title="Полный экран (F11)">
 	<svg viewBox="0 0 24 24">
+		<!-- expand icons -->
 		<polyline id="fs-icon-expand" points="8 3 3 3 3 8"></polyline>
 		<polyline id="fs-icon-expand2" points="21 8 21 3 16 3"></polyline>
 		<polyline id="fs-icon-expand3" points="3 16 3 21 8 21"></polyline>
 		<polyline id="fs-icon-expand4" points="16 21 21 21 21 16"></polyline>
+		<!-- collapse icons (hidden until fullscreen active) -->
+		<polyline id="fs-icon-collapse" points="4 14 4 20 10 20" style="display:none"></polyline>
+		<polyline id="fs-icon-collapse2" points="20 10 20 4 14 4" style="display:none"></polyline>
+		<polyline id="fs-icon-collapse3" points="14 20 20 20 20 14" style="display:none"></polyline>
+		<polyline id="fs-icon-collapse4" points="4 10 4 4 10 4" style="display:none"></polyline>
 	</svg>
 </button>
 

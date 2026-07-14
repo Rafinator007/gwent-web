@@ -4474,3 +4474,104 @@ document.getElementById('btn-cancel-lobby').addEventListener('click', () => {
 	isMultiplayer = false;
 });
 
+/* ─────────────────────────────────────────────────────────────────────────
+   AUTO-FIT  &  FULLSCREEN
+   ─────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Scales <main> so the 16:9 game board always fills the visible viewport
+ * without any overflow / scrolling.  Uses CSS transform so all vw-based
+ * positions inside <main> still work correctly.
+ */
+function fitGameToScreen() {
+	const mainEl = document.querySelector('main');
+	if (!mainEl) return;
+
+	const vw  = window.innerWidth;
+	const vh  = window.innerHeight;
+
+	// Natural game height at current viewport width (16 : 9 ratio)
+	const naturalH = vw * (1080 / 1920);
+
+	// How much do we need to shrink (or enlarge) to fit the height?
+	const scale = Math.min(1, vh / naturalH);   // never scale > 1 (no up-scaling)
+
+	if (scale >= 1) {
+		// Game fits — remove any transform
+		mainEl.style.transform       = '';
+		mainEl.style.transformOrigin = '';
+		document.body.style.height   = '';
+	} else {
+		// Scale down to fit height; anchor to top-left
+		mainEl.style.transform       = `scale(${scale})`;
+		mainEl.style.transformOrigin = 'top left';
+		// Shrink body so scrollbars never appear
+		document.body.style.height   = (naturalH * scale) + 'px';
+	}
+}
+
+// Run once on load, then on every resize / orientation change
+fitGameToScreen();
+window.addEventListener('resize', fitGameToScreen);
+
+/* ── Fullscreen toggle ─────────────────────────────────────────── */
+
+function isFullscreen() {
+	return !!(document.fullscreenElement
+		|| document.webkitFullscreenElement
+		|| document.mozFullScreenElement
+		|| document.msFullscreenElement);
+}
+
+function enterFullscreen() {
+	const el = document.documentElement;
+	if      (el.requestFullscreen)       el.requestFullscreen();
+	else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+	else if (el.mozRequestFullScreen)    el.mozRequestFullScreen();
+	else if (el.msRequestFullscreen)     el.msRequestFullscreen();
+}
+
+function exitFullscreen() {
+	if      (document.exitFullscreen)       document.exitFullscreen();
+	else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+	else if (document.mozCancelFullScreen)  document.mozCancelFullScreen();
+	else if (document.msExitFullscreen)     document.msExitFullscreen();
+}
+
+function toggleFullscreen() {
+	if (isFullscreen()) exitFullscreen(); else enterFullscreen();
+}
+
+// Update button icon when fullscreen state changes
+function onFullscreenChange() {
+	const btn      = document.getElementById('fullscreen-btn');
+	const isFs     = isFullscreen();
+	const expands  = ['fs-icon-expand','fs-icon-expand2','fs-icon-expand3','fs-icon-expand4'];
+	const collapses= ['fs-icon-collapse','fs-icon-collapse2','fs-icon-collapse3','fs-icon-collapse4'];
+
+	if (btn) btn.title = isFs ? 'Выйти из полного экрана (ESC)' : 'Полный экран (F11)';
+
+	expands .forEach(id => { const e = document.getElementById(id); if (e) e.style.display = isFs ? 'none' : ''; });
+	collapses.forEach(id => { const e = document.getElementById(id); if (e) e.style.display = isFs ? ''     : 'none'; });
+
+	// After entering/exiting fullscreen the window size changes — re-fit
+	setTimeout(fitGameToScreen, 100);
+}
+
+['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
+	.forEach(ev => document.addEventListener(ev, onFullscreenChange));
+
+// Fullscreen button click
+const fsBtn = document.getElementById('fullscreen-btn');
+if (fsBtn) {
+	fsBtn.addEventListener('click', toggleFullscreen);
+}
+
+// F11 key → toggle fullscreen (prevent default browser behavior where possible)
+document.addEventListener('keydown', (e) => {
+	if (e.key === 'F11') {
+		e.preventDefault();
+		toggleFullscreen();
+	}
+});
+
