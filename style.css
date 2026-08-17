@@ -365,6 +365,10 @@ html {
 	width: 100%;
 	height: calc(100vw * 1080 / 1920);
 	z-index: 95;
+	pointer-events: auto !important;
+}
+#carousel > :nth-child(1) * {
+	pointer-events: auto;
 }
 
 /*
@@ -470,8 +474,12 @@ html {
     height: calc(100vw * 1080 / 1920);
     background-color: rgba(10,10,10,.95);
     z-index: 1000;
+	pointer-events: auto !important;
     /* background-image: url(img/boardtest10.png); */
     /* background-size: contain; */
+}
+#popup * {
+	pointer-events: auto;
 }
 
 
@@ -1268,6 +1276,10 @@ main { background-image: url('img/boardtest8.png'); }
 	z-index: 85;
 	top: 0;
 	left: 0;
+	pointer-events: auto !important;
+}
+#deck-customization * {
+	pointer-events: auto;
 }
 
 #faction-title {

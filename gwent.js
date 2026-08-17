@@ -2198,26 +2198,38 @@ class UI {
 		].forEach(addMouseEnterSFXBySelector);
 	}
 	
-	// Enables or disables client interration
+	// Enables or disables client interaction
 	enablePlayer(enable){
-		let main = document.getElementsByTagName("main")[0].classList;
-		if (enable) main.remove("noclick"); else main.add("noclick");
-
-		// Визуальная деактивация карт в руке и кнопок во время хода соперника
 		let handRow = document.getElementById("hand-row");
 		let passBtn = document.getElementById("pass-button");
 		let leaderMe = document.getElementById("leader-me");
 
-		if (handRow && passBtn && leaderMe) {
+		if (handRow) {
 			if (enable) {
+				handRow.classList.remove("noclick");
 				handRow.style.opacity = "1";
 				handRow.style.filter = "none";
-				passBtn.style.opacity = "1";
-				leaderMe.style.opacity = "1";
 			} else {
+				handRow.classList.add("noclick");
 				handRow.style.opacity = "0.45";
 				handRow.style.filter = "grayscale(50%)";
+			}
+		}
+		if (passBtn) {
+			if (enable) {
+				passBtn.classList.remove("noclick");
+				passBtn.style.opacity = "1";
+			} else {
+				passBtn.classList.add("noclick");
 				passBtn.style.opacity = "0.5";
+			}
+		}
+		if (leaderMe) {
+			if (enable) {
+				leaderMe.classList.remove("noclick");
+				leaderMe.style.opacity = "1";
+			} else {
+				leaderMe.classList.add("noclick");
 				leaderMe.style.opacity = "0.5";
 			}
 		}
