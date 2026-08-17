@@ -877,8 +877,16 @@ class Grave extends CardContainer {
 	
 	// Override
 	addCard(card){
+		if (!card)
+			return;
+		if (card.name === "Bovine Defense Force" || card.name === "Hemdall" || card.name === "Cow" || card.name === "Kambi") {
+			if (card.elem && card.elem.parentElement) {
+				card.elem.parentElement.removeChild(card.elem);
+			}
+			return;
+		}
 		this.setCardOffset(card, this.cards.length);
-		if (card && this.cards.length === 0)
+		if (this.cards.length === 0)
 		{
 			this.elem.addEventListener('mouseenter', CLICK_EVENT_SFX);
 		}

@@ -244,14 +244,6 @@ var ability_dict = {
 		description: "При удалении с поля боя призывает мощный отряд на свое место. ",
 		removed: async (card) => {
 			let bdf = new Card(card_dict[21], card.holder);
-			bdf.removed.push( () => setTimeout( () => {
-				if (game.isPlaying() && bdf.holder.grave.cards.includes(bdf))
-					bdf.holder.grave.removeCard(bdf);
-			}, 1001) );
-			setTimeout( () => {
-				if (game.isPlaying() && card.holder.grave.cards.includes(card))
-					card.holder.grave.removeCard(card);
-			}, 1001);
 			await board.addCardToRow(bdf, "close", card.holder);
 		},
 		weight: () => 50
@@ -261,14 +253,6 @@ var ability_dict = {
 		description: "При удалении с поля боя призывает мощный отряд на свое место. ",
 		removed: async card => {
 			let bdf = new Card(card_dict[196], card.holder);
-			bdf.removed.push( () => setTimeout( () => {
-				if (game.isPlaying() && bdf.holder.grave.cards.includes(bdf))
-					bdf.holder.grave.removeCard(bdf); 
-			}, 1001) );
-			setTimeout( () => {
-				if (game.isPlaying() && card.holder.grave.cards.includes(card))
-					card.holder.grave.removeCard(card);
-			}, 1001);
 			await board.addCardToRow(bdf, "close", card.holder);
 		},
 		weight: () => 50
