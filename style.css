@@ -163,8 +163,8 @@ html {
 }
 
 #toggle-music {
-    top: 48.9vw;
-    left: 14vw;
+    top: 52.5vw;
+    left: 1vw;
 }
 #toggle-music.deck-menu { 
 	top: 51.5vw;
@@ -173,8 +173,8 @@ html {
 }
 
 #toggle-sfx {
-	top: 48.9vw;
-    left: 17.2vw;
+	top: 52.5vw;
+    left: 4.5vw;
 }
 #toggle-sfx.deck-menu {
 	top: 51.5vw;
@@ -1762,8 +1762,8 @@ main { background-image: url('img/boardtest8.png'); }
 
 /* Language Toggle Button styling */
 #toggle-lang {
-	top: 48.9vw;
-	left: 22.8vw;
+	top: 52.5vw;
+	left: 8vw;
 	color: #fff;
 	font-size: 1vw;
 	font-weight: bold;
@@ -1795,22 +1795,29 @@ main { background-image: url('img/boardtest8.png'); }
 
 /* Carousel Select Button styling */
 #carousel-select-btn {
+	position: absolute;
+	left: 50%;
+	bottom: 1.2vw;
+	transform: translateX(-50%);
+	z-index: 100;
 	display: block;
-	margin: 0.8vw auto 0;
-	padding: 0.5vw 1.8vw;
-	font-size: 1vw;
-	color: white;
+	padding: 0.6vw 2.4vw;
+	font-size: 1.1vw;
+	font-weight: bold;
+	color: #ffffff;
 	background-color: #1a1a1a;
-	border: 0.1vw ridge #c9a054;
-	border-radius: 0.3vw;
+	border: 0.15vw ridge #c9a054;
+	border-radius: 0.4vw;
 	cursor: pointer;
 	transition: all 0.2s;
 	font-family: inherit;
 	pointer-events: auto !important;
+	box-shadow: 0 0 0.8vw rgba(0, 0, 0, 0.85);
 }
 #carousel-select-btn:hover {
-	box-shadow: 0 0 0.8vw #c9a054;
+	box-shadow: 0 0 1.2vw #c9a054;
 	background-color: #2b2b2b;
+	border-color: #ffffff;
 }
 
 /* English overrides for notification text content */

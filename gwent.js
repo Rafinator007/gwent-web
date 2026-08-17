@@ -2786,6 +2786,15 @@ class Carousel {
 		}
 	}
 	
+	// Called when user clicks on the middle card in focus
+	onMiddleCardClick(event) {
+		if (!this.isViewOnly && this.count > 0) {
+			this.select(event);
+		} else {
+			this.shift(event, 0);
+		}
+	}
+
 	// Called by client to perform action on the middle card in focus
 	async select(event) {
 		try {
@@ -2835,6 +2844,8 @@ class Carousel {
 		{
 			return this.exit();
 		}
+		if (this.bSort)
+			this.indices.sort( (a, b) => Card.compare(this.container.cards[a],this.container.cards[b]) );
 		if (this.index >= this.indices.length)
 			this.index =  this.indices.length-1;
 		for (let i=0; i<this.previews.length; i++) {
@@ -2851,6 +2862,14 @@ class Carousel {
 			}
 		}
 		ui.setDescription(this.container.cards[this.indices[this.index]], this.desc);
+		if (this.selectBtn) {
+			if (!this.isViewOnly && this.count > 0) {
+				this.selectBtn.classList.remove("hide");
+				this.selectBtn.innerText = (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? "Confirm" : "Выбрать";
+			} else {
+				this.selectBtn.classList.add("hide");
+			}
+		}
 	}
 	
 	// Clears and quits the current carousel
