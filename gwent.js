@@ -621,8 +621,15 @@ class Player {
 	
 	// Puts the player in the passed state
 	setPassed(hasPassed) {
-		if (this.passed ^ hasPassed)
-			document.getElementById("passed-" + this.tag).classList.toggle("passed");
+		let elem = document.getElementById("passed-" + this.tag);
+		if (elem) {
+			if (hasPassed) {
+				elem.innerText = (typeof Settings !== 'undefined' && Settings.language && Settings.language.get() === "en") ? "Passed" : "Пас";
+				elem.classList.add("passed");
+			} else {
+				elem.classList.remove("passed");
+			}
+		}
 		this.passed = hasPassed;
 	}
 	
