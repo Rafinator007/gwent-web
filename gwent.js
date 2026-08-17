@@ -324,9 +324,14 @@ class ControllerAI {
 	
 	// Assigns a weight for how likely the controller is to activate its leader ability
 	weightLeader(card, max, data) {
-		let w = ability_dict[card.abilities[0]].weight;
-		if (ability_dict[card.abilities[0]].weight) {
-			let score = w(card, this, max, data);
+		if (!card || !card.abilities || !card.abilities.length)
+			return 0;
+		let ab = ability_dict[card.abilities[0]];
+		if (ab && ab.weight) {
+			let score = ab.weight(card, this, max, data);
+			if (score > 0) {
+				return score + (game.roundCount > 1 ? 15 : 5);
+			}
 			return score;
 		}
 		return 10 + (game.roundCount-1) * 15;
@@ -338,12 +343,19 @@ class ControllerAI {
 		if (board.row[index].total < 10)
 			return 0;
 		let score = max.rmax[index].cards.reduce((a,c) => a + c.power, 0);
-		return score;
+		return score > 0 ? score + 15 : 0;
 	}
 	
-	// Calculates a weight for how likely the conroller will use horn on this row
+	// Calculates a weight for how likely the controller will use horn on this row
 	weightHornRow(card, row){
-		return row.special !== null ? 0 : this.weightRowChange(card, row);
+		if (!row || row.special !== null || row.effects.horn > 0)
+			return 0;
+		let nonHeroUnits = row.cards.filter(c => c.isUnit());
+		let currentScore = nonHeroUnits.reduce((a, c) => a + row.calcCardScore(c), 0);
+		if (currentScore > 0) {
+			return currentScore + (game.roundCount > 1 ? 20 : 10);
+		}
+		return 0;
 	}
 	
 	// Calculates weight for playing a card on a given row, min 0
@@ -431,25 +443,38 @@ class ControllerAI {
 	// Assigns a weights for how likely the controller with play a card from its hand
 	weightCard(card, max, data){
 		if (card.name === "Decoy")
-			return data.spy.length ? 50 : data.medic.length ? 15 : data.scorch.length  ? 10 : max.me.length ? 1 : 0;
+			return data.spy.length ? 70 : data.medic.length ? 25 : data.scorch.length ? 15 : max.me.length ? 2 : 0;
 		if (card.name === "Commander's Horn") {
-			let rows = [0,1,2].map(i => board.row[i]).filter(r => r.special === null);
+			let rows = [0,1,2].map(i => board.row[i]).filter(r => r.special === null && r.effects.horn === 0);
 			if (!rows.length)
 				return 0;
 			rows = rows.map(r => this.weightHornRow(card, r) );
-			return Math.max(...rows)/2;
+			return Math.max(...rows);
 		}
 		
 		if (card.abilities) {
 			if (card.abilities.includes("scorch")) {
+				// Global scorch evaluation (including Clan Dimun Pirate)
+				let unitPower = card.isUnit() ? card.power : 0;
 				let power_op = max.op.length ? max.op[0].card.power : 0;
 				let power_me = max.me.length ? max.me[0].card.power : 0;
+				let future_power_me = Math.max(power_me, unitPower);
+				
+				// If my future max power is strictly greater than opponent's, scorch will only kill my own cards!
+				if (future_power_me > power_op) {
+					return 0; // NEVER play scorch / pirate to destroy own cards
+				}
+				if (future_power_me === power_op) {
+					let total_op = power_op * max.op.length;
+					let total_me = power_me * max.me.length + (unitPower === power_op ? unitPower : 0);
+					return total_op > total_me ? Math.max(0, total_op - total_me) : 0;
+				}
+				// Opponent's highest unit is strictly higher -> we destroy their highest unit(s)!
 				let total_op = power_op * max.op.length;
-				let total_me = power_me * max.me.length;
-				return power_me > power_op ? 0 : power_me < power_op ? total_op : Math.max(0, total_op - total_me);
+				return total_op + unitPower + 25; // Great play!
 			}
 			if (card.abilities.includes("decoy")) {
-				return data.spy.length ? 50 : data.medic.length ? 15 : data.scorch.length  ? 10 : max.me.length ? 1 : 0;
+				return data.spy.length ? 70 : data.medic.length ? 25 : data.scorch.length ? 15 : max.me.length ? 2 : 0;
 			}
 			if (card.abilities.includes("mardroeme")) {
 				let rows = [1,2].map(i => board.row[i]);
@@ -467,16 +492,21 @@ class ControllerAI {
 		else
 			row = board.getRow(card, card.row === "agile" ? "close" : card.row, this.player);
 		let score = row.calcCardScore(card);
-		switch(card.abilities[card.abilities.length -1])
+		
+		let lastAbility = card.abilities[card.abilities.length - 1];
+		switch(lastAbility)
 		{
 			case "bond": 
 			case "morale":
 			case "horn":
 				score = this.weightRowChange(card, row); break;
 			case "medic": 
-				score = this.weightMedic(data, score, card.holder);	break;
-			case "spy": score = 15 + score; break;
-			case "muster": score *= 3; break;
+				score = this.weightMedic(data, score, card.holder); break;
+			case "spy": 
+				// Spies should be played early and with highest priority (draw cards + stall)
+				score = 60 + (this.player.opponent().passed ? 0 : 30); 
+				break;
+			case "muster": score *= 2.5; break;
 			case "scorch_c":
 				score = Math.max(1, this.weightScorchRow(card, max, "close")); break;
 			case "scorch_r": 
@@ -486,7 +516,22 @@ class ControllerAI {
 			case "berserker":
 				score = this.weightBerserker(card, row, score); break;
 			case "avenger": case "avenger_kambi":
-				return score + ability_dict[card.abilities[card.abilities.length -1]].weight();
+				return score + ability_dict[lastAbility].weight();
+		}
+		
+		// Anti-scorch & smart early opening logic:
+		// In early turns of a round (when opponent hasn't passed and still has cards):
+		// - Low-power units (1-4) are favored as safe openers/probes
+		// - High-power non-hero units (>= 7) are not rushed out naked where they can be easily scorched
+		if (!this.player.opponent().passed && this.player.hand.cards.length >= 7) {
+			if (!card.hero && card.isUnit()) {
+				let cardP = card.power || card.basePower;
+				if (cardP <= 4) {
+					score += (5 - cardP) * 3; // Boost low strength scouts (1s get +12, 2s get +9, etc.)
+				} else if (cardP >= 7 && !card.abilities.includes("spy")) {
+					score = Math.max(1, Math.floor(score * 0.45)); // Don't lead with massive non-heroes
+				}
+			}
 		}
 		
 		return score;
