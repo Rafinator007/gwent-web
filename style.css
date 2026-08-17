@@ -364,7 +364,7 @@ html {
 	position:absolute;
 	width: 100%;
 	height: calc(100vw * 1080 / 1920);
-	z-index:90;
+	z-index: 95;
 }
 
 /*
