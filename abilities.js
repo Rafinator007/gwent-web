@@ -163,9 +163,32 @@ var ability_dict = {
 				return;
 			let wrapper = {card : null};
 			if (game.randomRespawn) {
-				const cards = grave.findCardsRandom(c => c.isUnit());
-				if (cards.length > 0)
-					wrapper.card = cards[0];
+				if (typeof isMultiplayer !== 'undefined' && isMultiplayer && game.currPlayer === player_op && player_op.controller instanceof ControllerNetwork) {
+					let selectData = await player_op.controller.waitForCarouselSelect();
+					let targetIdx = (typeof selectData === 'object' && selectData !== null) ? selectData.index : selectData;
+					if (typeof selectData === 'object' && selectData !== null && card.holder.grave && card.holder.grave.cards) {
+						let matchIdx = card.holder.grave.cards.findIndex(c => c && (
+							(selectData.cardName && c.name === selectData.cardName) ||
+							(selectData.filename && c.filename === selectData.filename)
+						));
+						if (matchIdx !== -1) targetIdx = matchIdx;
+					}
+					wrapper.card = card.holder.grave.cards[targetIdx] || units[0];
+				} else {
+					const cards = grave.findCardsRandom(c => c.isUnit());
+					if (cards.length > 0) {
+						wrapper.card = cards[0];
+						if (typeof isMultiplayer !== 'undefined' && isMultiplayer && game.currPlayer === player_me && socket) {
+							let selectedIndex = card.holder.grave.cards.indexOf(wrapper.card);
+							socket.emit('game_action', {
+								type: 'CAROUSEL_SELECT',
+								index: selectedIndex,
+								cardName: wrapper.card.name,
+								filename: wrapper.card.filename
+							});
+						}
+					}
+				}
 			} else if (card.holder.controller instanceof ControllerAI)
 				wrapper.card =  card.holder.controller.medic(card, grave);
 			else

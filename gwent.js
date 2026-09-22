@@ -19,8 +19,54 @@ class Controller {}
 class ControllerNetwork {
 	constructor(player) {
 		this.player = player;
-		this.pendingCarouselResolve = null;
-		this.pendingAgileResolve = null;
+		this.pendingCarouselResolvers = [];
+		this.pendingCarouselSelections = [];
+		this.pendingAgileResolvers = [];
+		this.pendingAgileSelections = [];
+		this.pendingScoiaResolve = null;
+	}
+
+	resolveCarousel(data) {
+		if (this.pendingCarouselResolvers.length > 0) {
+			const resolve = this.pendingCarouselResolvers.shift();
+			resolve(data);
+		} else {
+			this.pendingCarouselSelections.push(data);
+		}
+	}
+
+	async waitForCarouselSelect() {
+		if (this.pendingCarouselSelections.length > 0) {
+			return this.pendingCarouselSelections.shift();
+		}
+		return new Promise(resolve => {
+			this.pendingCarouselResolvers.push(resolve);
+		});
+	}
+
+	resolveAgile(data) {
+		if (this.pendingAgileResolvers.length > 0) {
+			const resolve = this.pendingAgileResolvers.shift();
+			resolve(data);
+		} else {
+			this.pendingAgileSelections.push(data);
+		}
+	}
+
+	async waitForAgileChoice() {
+		if (this.pendingAgileSelections.length > 0) {
+			return this.pendingAgileSelections.shift();
+		}
+		return new Promise(resolve => {
+			this.pendingAgileResolvers.push(resolve);
+		});
+	}
+
+	reset() {
+		this.pendingCarouselResolvers = [];
+		this.pendingCarouselSelections = [];
+		this.pendingAgileResolvers = [];
+		this.pendingAgileSelections = [];
 		this.pendingScoiaResolve = null;
 	}
 	
@@ -2595,10 +2641,24 @@ class UI {
 				}
 			} else if (isMultiplayer && player_op.controller instanceof ControllerNetwork) {
 				for (let i=0; i<count; ++i){
-					let index = await new Promise(resolve => {
-						player_op.controller.pendingCarouselResolve = resolve;
-					});
-					await action(container, index);
+					let data = await player_op.controller.waitForCarouselSelect();
+					let targetIdx = (typeof data === 'object' && data !== null) ? data.index : data;
+					if (typeof data === 'object' && data !== null && container && container.cards) {
+						let exactMatch = container.cards[targetIdx];
+						if (!exactMatch || (data.cardName && exactMatch.name !== data.cardName)) {
+							let foundIdx = container.cards.findIndex(c => c && (
+								(data.cardName && c.name === data.cardName) ||
+								(data.filename && c.filename === data.filename)
+							));
+							if (foundIdx !== -1) {
+								targetIdx = foundIdx;
+							}
+						}
+					}
+					if (container && container.cards && (!container.cards[targetIdx] && container.cards.length > 0)) {
+						targetIdx = 0;
+					}
+					await action(container, targetIdx);
 				}
 			}
 			return;
@@ -2708,9 +2768,8 @@ class UI {
 	async waitForRowSelection(card)
 	{
 		if (isMultiplayer && game.currPlayer === player_op) {
-			let rowIndex = await new Promise(resolve => {
-				player_op.controller.pendingAgileResolve = resolve;
-			});
+			let data = await player_op.controller.waitForAgileChoice();
+			let rowIndex = (typeof data === 'object' && data !== null) ? data.rowIndex : data;
 			return board.row[5 - rowIndex];
 		}
 
@@ -2882,7 +2941,13 @@ class Carousel {
 			
 			let selectedIndex = this.indices[this.index];
 			if (isMultiplayer && game.state === GameState.PLAYING && game.currPlayer === player_me) {
-				socket.emit('game_action', { type: 'CAROUSEL_SELECT', index: selectedIndex });
+				let selectedCard = (this.container && this.container.cards) ? this.container.cards[selectedIndex] : null;
+				socket.emit('game_action', {
+					type: 'CAROUSEL_SELECT',
+					index: selectedIndex,
+					cardName: selectedCard ? selectedCard.name : null,
+					filename: selectedCard ? selectedCard.filename : null
+				});
 			}
 			
 			await this.action(this.container, selectedIndex);
@@ -4408,16 +4473,14 @@ async function handleOpponentAction(action) {
 			break;
 		}
 		case 'CAROUSEL_SELECT': {
-			if (player_op.controller.pendingCarouselResolve) {
-				player_op.controller.pendingCarouselResolve(action.index);
-				player_op.controller.pendingCarouselResolve = null;
+			if (player_op.controller instanceof ControllerNetwork) {
+				player_op.controller.resolveCarousel(action);
 			}
 			break;
 		}
 		case 'AGILE_CHOICE': {
-			if (player_op.controller.pendingAgileResolve) {
-				player_op.controller.pendingAgileResolve(action.rowIndex);
-				player_op.controller.pendingAgileResolve = null;
+			if (player_op.controller instanceof ControllerNetwork) {
+				player_op.controller.resolveAgile(action);
 			}
 			break;
 		}
@@ -4516,6 +4579,9 @@ function initMultiplayer() {
 		game.reset();
 		player_me.reset();
 		player_op.reset();
+		if (player_op.controller instanceof ControllerNetwork) {
+			player_op.controller.reset();
+		}
 		
 		// Переинициализация колод при рематче в том же порядке:
 		if (myPlayerIndex === 0) {
