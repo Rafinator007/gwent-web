@@ -7,7 +7,7 @@ var factions = {
 		},
 		factionAbility: player => game.roundStart.push( async () => {
 			if (game.roundCount > 1 && game.roundHistory[game.roundCount-2].winner === player) {
-				player.deck.draw(player.hand);
+				await player.deck.draw(player.hand);
 				await ui.notification("north", 1200);
 			}
 			return false;

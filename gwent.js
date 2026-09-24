@@ -1246,7 +1246,7 @@ class Row extends CardContainer {
 	}
 	
 	// Override
-	removeCard(card) {
+	async removeCard(card) {
 		card = isNumber(card) ? card === -1 ? this.special : this.cards[card] : card;
 		if (card.isSpecial()) {
 			this.special = null;
@@ -1256,8 +1256,7 @@ class Row extends CardContainer {
 			card.resetPower();
 		}
 		this.updateState(card, false);
-		for (let x of card.removed)
-			x(card);
+		await Promise.all(card.removed.map(x => x(card)));
 		this.updateScore();
 		return card;
 	}
@@ -1364,7 +1363,7 @@ class Row extends CardContainer {
 			return;
 		let horn = new Card(card_dict[5], null);
 		await this.addCard(horn);
-		game.roundEnd.push( () => this.removeCard(horn) );
+		game.roundEnd.push( async () => { await this.removeCard(horn); } );
 	}
 	
 	// Applies a local scorch effect to this row
@@ -1402,8 +1401,7 @@ class Row extends CardContainer {
 	// Override
 	reset(){
 		super.reset();
-		while(this.special)
-			this.removeCard(this.special);
+		if (this.special) { this.special = null; }
 		while(this.elem_special.firstChild)
 			this.elem_special.removeChild(this.elem_special.firstChild);
 		this.total = 0;
@@ -1544,7 +1542,8 @@ class Board {
 		if (isString(dest))
 			dest = this.getRow(card, dest);
 		await translateTo(card, source ? source : null, dest);
-		await dest.addCard(source ? source.removeCard(card) : card);
+		let movedCard = source ? await source.removeCard(card) : card;
+		await dest.addCard(movedCard);
 	}
 	
 	// Sends and translates a card from the source to a row name associated with the passed player
@@ -1733,7 +1732,7 @@ class Game {
 				AudioManager.playSFX('redraw');
 				socket.emit('game_action', { type: 'REDRAW_CARD', index: i });
 				await player_me.deck.swap(c, c.cards[i]);
-			}, c => true, false, true, "Выберите до 2 карт для замены.");
+			}, c => c.name !== "Roach", false, true, "Выберите до 2 карт для замены.");
 			
 			socket.emit('game_action', { type: 'REDRAW_DONE' });
 			myRedrawsDone = true;
@@ -1759,7 +1758,7 @@ class Game {
 			await ui.queueCarousel(player_me.hand, 2, async (c, i) => { 
 				AudioManager.playSFX('redraw');
 				await player_me.deck.swap(c, c.cards[i]);
-			}, c => true, false, true, "Выберите до 2 карт для замены.");
+			}, c => c.name !== "Roach", false, true, "Выберите до 2 карт для замены.");
 			ui.enablePlayer(false);
 		}
 	}
@@ -1943,6 +1942,9 @@ class Game {
 		this.reset();
 		player_me.reset();
 		if (typeof player_op !== 'undefined' && player_op) player_op.reset();
+		// Explicitly reset the board and weather to clear any visual leftovers from previous game
+		board.row.forEach(r => r.reset());
+		weather.reset();
 		player_op = new Player('op', 'Player 2', dm.constructOpponentDeck(false));
 		this.endScreen.classList.add("hide");
 		this.startGame();
@@ -1957,6 +1959,9 @@ class Game {
 			this.reset();
 			player_me.reset();
 			player_op.reset();
+			// Explicitly reset board and weather for clean state
+			board.row.forEach(r => r.reset());
+			weather.reset();
 			this.endScreen.classList.add("hide");
 			this.startGame();
 		}
