@@ -2515,7 +2515,9 @@ class UI {
 		if (isMultiplayer) {
 			let cardIdx = player_me.hand.cards.indexOf(card);
 			let rowIdx = board.row.indexOf(row);
-			socket.emit('game_action', { type: 'PLAY_CARD', cardIndex: cardIdx, rowIndex: rowIdx });
+			// Send grave snapshot so opponent can resync before processing abilities like medic
+			const graveSnapshot = player_me.grave.cards.map(c => ({ name: c.name, filename: c.filename }));
+			socket.emit('game_action', { type: 'PLAY_CARD', cardIndex: cardIdx, rowIndex: rowIdx, graveSnapshot });
 		}
 		
 		if (card.name === "Scorch"){
@@ -2649,8 +2651,8 @@ class UI {
 					let data = await player_op.controller.waitForCarouselSelect();
 					let targetIdx = (typeof data === 'object' && data !== null) ? data.index : data;
 					if (typeof data === 'object' && data !== null && container && container.cards) {
-						let exactMatch = container.cards[targetIdx];
-						if (!exactMatch || (data.cardName && exactMatch.name !== data.cardName)) {
+						// Always try name/filename lookup first to handle grave order desync between clients
+						if (data.cardName || data.filename) {
 							let foundIdx = container.cards.findIndex(c => c && (
 								(data.cardName && c.name === data.cardName) ||
 								(data.filename && c.filename === data.filename)
@@ -4426,6 +4428,21 @@ async function handleOpponentAction(action) {
 		case 'PLAY_CARD': {
 			let card = player_op.hand.cards[action.cardIndex];
 			let row = action.rowIndex === -1 ? weather : board.row[5 - action.rowIndex];
+			
+			// Resync opponent's grave order using the snapshot from the sender
+			if (action.graveSnapshot && action.graveSnapshot.length > 0 && player_op.grave.cards.length === action.graveSnapshot.length) {
+				const reordered = [];
+				const remaining = [...player_op.grave.cards];
+				for (const snap of action.graveSnapshot) {
+					const idx = remaining.findIndex(c => c.name === snap.name && (c.filename === snap.filename || !snap.filename));
+					if (idx !== -1) {
+						reordered.push(remaining.splice(idx, 1)[0]);
+					}
+				}
+				if (reordered.length === player_op.grave.cards.length) {
+					player_op.grave.cards = reordered;
+				}
+			}
 			
 			ui.showPreviewVisuals(card);
 			await sleep(1000);
